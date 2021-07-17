@@ -3,3 +3,4 @@
 #include <SFML/Graphics.hpp>
 
 #include "input.h"
+#include "kart.h"

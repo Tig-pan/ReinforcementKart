@@ -2,13 +2,11 @@
 
 int main()
 {
-    sf::RenderWindow window(sf::VideoMode(200, 200), "SFML works!");
+    sf::RenderWindow window(sf::VideoMode(500, 500), "SFML works!");
     window.setFramerateLimit(60);
 
-    sf::CircleShape shape(100.f);
-    shape.setFillColor(sf::Color::Green);
-
     KeyboardInput input;
+    Kart kart("Test", &input, sf::Color::Yellow, 250, 250, 40);
 
     while (window.isOpen())
     {
@@ -21,17 +19,10 @@ int main()
             }
         }
 
-        input.update();
-
-        shape.move(sf::Vector2f(input.getSteering(), input.getMovement())); // moves the basic circle depending on the KeyboardInput
-        
-        shape.setFillColor(input.getDrift() ? sf::Color::Blue : sf::Color::Green); // sets the circles color to blue if the drift key is pressed
+        kart.update();
 
         window.clear();
-        if (!input.getAction()) // doesn't draw the circle if getAction is true
-        {
-            window.draw(shape);
-        }
+        kart.render(window);
         window.display();
     }
 

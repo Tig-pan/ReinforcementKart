@@ -55,7 +55,7 @@ void KeyboardInput::update()
 
 	/* Action is slightly different, only the first frame when it is pressed should the action be acknowleged. */
 
-	bool action = sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Space);
+	const bool action = sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Space);
 
 	currentAction = !isActionHeld && action;
 	isActionHeld = action;

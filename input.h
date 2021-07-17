@@ -3,7 +3,7 @@
 #include <SFML/Window.hpp>
 
 /*
-* An abstract class used to represent a method of giving input, this may be human input from a keyboard, or from an AI
+An abstract class used to represent a method of giving input, this may be human input from a keyboard, or from an AI
 */
 class Input abstract
 {
@@ -26,13 +26,13 @@ public:
 };
 
 /*
-* An Input for KeyboardInput, this type of input is executed by a human using a keyboard. The default controls are:
-*	Left/a			-> steer left
-*	Right/d			-> steer right
-*	Down/s			-> brake
-*	Up/w			-> accelerate
-*	LShift/RShift	-> drift
-*	Space Bar		-> item action
+An Input for KeyboardInput, this type of input is executed by a human using a keyboard. The default controls are:
+	Left/a			-> steer left
+	Right/d			-> steer right
+	Down/s			-> brake
+	Up/w			-> accelerate
+	LShift/RShift	-> drift
+	Space Bar		-> item action
 */
 class KeyboardInput : public Input
 {
