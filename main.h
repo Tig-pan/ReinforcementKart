@@ -4,3 +4,4 @@
 
 #include "input.h"
 #include "kart.h"
+#include "wall.h"

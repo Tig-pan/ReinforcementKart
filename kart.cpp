@@ -31,6 +31,8 @@ void Kart::update()
 
 	input->update();
 
+	const float currentVelocity = sqrtf(xVelocity * xVelocity + yVelocity * yVelocity);
+	std::cout << currentVelocity << "\n";
 	// approach the desired input
 	const float desiredWheelAngle = input->getSteering() * KART_WHEEL_ANGLE_LIMIT;
 	if (abs(wheelAngle - desiredWheelAngle) < 2.5f)
@@ -46,10 +48,10 @@ void Kart::update()
 		wheelAngle += 2.5f;
 	}
 
-	const float turningMulti = sqrtf(sqrtf(xVelocity * xVelocity + yVelocity * yVelocity)) * (isMovingForward() ? 1.0f : -1.0f) * (isDrifting ? KART_DRIFT_TURN_MULTI : 1.0f) * KART_TURN_SPEED;
+	const float turningMulti = sqrtf(currentVelocity) * (isMovingForward() ? 1.0f : -1.0f) * (isDrifting ? KART_DRIFT_TURN_MULTI : 1.0f) * KART_TURN_SPEED;
 	angle += wheelAngle * turningMulti;
 
-	const float movementMulti = input->getMovement() * (input->getMovement() < 0 ? 0.5f : 1.0f) * KART_ACCLERATION;
+	const float movementMulti = input->getMovement() * (input->getMovement() < 0 ? 0.5f : 1.0f) * (currentVelocity > KART_SOFT_SPEED_CAP ? KART_SOFT_SPEED_REDUCTION : 1.0f) * KART_ACCLERATION;
 	xVelocity += cosf(angle * DEG_TO_RAD) * movementMulti;
 	yVelocity += sinf(angle * DEG_TO_RAD) * movementMulti;
 
@@ -58,8 +60,8 @@ void Kart::update()
 	yPosition += yVelocity;
 
 	// drag and friction
-	xVelocity *= isDrifting ? KART_DRIFT_DRAG : KART_BASE_DRAG;
-	yVelocity *= isDrifting ? KART_DRIFT_DRAG : KART_BASE_DRAG;
+	xVelocity *= KART_DRAG;
+	yVelocity *= KART_DRAG;
 
 	doFriction();
 }
@@ -125,20 +127,20 @@ float Kart::getMovementAngle(float usedAngle)
 
 bool Kart::isMovingForward()
 {
-	// calculates if its moving forward by finding the angle between its velocity and its forward trajectory
-	return getMovementAngle(angle) < (90.0f * DEG_TO_RAD);
+	// calculates if its moving backward by finding the angle between its velocity and its forward trajectory
+	return getMovementAngle(angle - wheelAngle) < (90.0f * DEG_TO_RAD);
 }
 
 void Kart::doFriction()
 {
 	// change the velocity towards the velocitys projection to the forward direction of the vehicle
-	const float dot = xVelocity * cosf((angle + wheelAngle / 2.0f) * DEG_TO_RAD) + yVelocity * sinf((angle + wheelAngle / 2.0f) * DEG_TO_RAD);
+	const float dot = xVelocity * cosf(angle * DEG_TO_RAD) + yVelocity * sinf(angle * DEG_TO_RAD);
 
-	float xChange = xVelocity - cosf((angle + wheelAngle / 2.0f) * DEG_TO_RAD) * dot;
-	float yChange = yVelocity - sinf((angle + wheelAngle / 2.0f) * DEG_TO_RAD) * dot;
+	float xChange = xVelocity - cosf(angle * DEG_TO_RAD) * dot;
+	float yChange = yVelocity - sinf(angle * DEG_TO_RAD) * dot;
 
 	// drifting is decided based the euclidian changes
-	if (isDrifting && abs(xChange * xChange + yChange * yChange) < (input->getDrift() ? KART_DRIFT_STOP_DRIFT : KART_BASE_STOP_DRIFT))
+	if (isDrifting && sqrt(xChange * xChange + yChange * yChange) < (input->getDrift() ? KART_DRIFT_STOP_DRIFT : KART_BASE_STOP_DRIFT))
 	{
 		isDrifting = false;
 	}
@@ -168,7 +170,17 @@ void Kart::doFriction()
 		yChange = -maxChange;
 	}
 
+	const float starterMagnitude = sqrtf(xVelocity * xVelocity + yVelocity * yVelocity);
+
 	// update the velocities
 	xVelocity -= xChange;
 	yVelocity -= yChange;
+
+	const float afterMagnitude = sqrtf(xVelocity * xVelocity + yVelocity * yVelocity);
+
+	if (afterMagnitude > starterMagnitude)
+	{
+		xVelocity *= (starterMagnitude / afterMagnitude);
+		yVelocity *= (starterMagnitude / afterMagnitude);
+	}
 }

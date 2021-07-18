@@ -52,20 +52,21 @@ private:
 	const float KART_TURN_SPEED = 0.0175f;
 	const float KART_DRIFT_TURN_MULTI = 1.5f;
 
-	const float KART_DRIFT_DRAG = 0.9825f;
-	const float KART_BASE_DRAG = 0.99f;
+	const float KART_DRAG = 0.995f;
+	const float KART_SOFT_SPEED_CAP = 5.0f;
+	const float KART_SOFT_SPEED_REDUCTION = 0.3f;
 
-	const float KART_DRIFT_START_DRIFT = 1.5f;
-	const float KART_DRIFT_STOP_DRIFT = 1.0f;
-	const float KART_BASE_START_DRIFT = 10.0f;
-	const float KART_BASE_STOP_DRIFT = 8.0f;
+	const float KART_DRIFT_START_DRIFT = 0.4f;
+	const float KART_DRIFT_STOP_DRIFT = 0.3f;
+	const float KART_BASE_START_DRIFT = 1.8f;
+	const float KART_BASE_STOP_DRIFT = 1.5f;
 
-	const float KART_DRIFT_MAX_CHANGE = 0.0075f;
-	const float KART_BASE_MAX_CHANGE = 0.05f;
+	const float KART_DRIFT_MAX_CHANGE = 0.02f;
+	const float KART_BASE_MAX_CHANGE = 0.08f;
 
 	// Returns the current movement angle in radians
 	float getMovementAngle(float usedAngle);
-	// Returns true if the Kart has a positive (>= 0) forward velocity, false otherwise
+	// Returns true if the Kart has a positive forward velocity, false otherwise
 	bool isMovingForward();
 	// Updates xVelocity and yVelocity, by calculating the friction of the wheels, which encourages the car to move in the direction of the wheels
 	void doFriction();
