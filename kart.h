@@ -3,8 +3,14 @@
 #define KART_WIDTH 20
 #define KART_LENGTH 30
 
+#define KART_WHEEL_LENGTH 10
+#define KART_WHEEL_WIDTH 8
+
+#define KART_WHEEL_ANGLE_LIMIT 40
+
 #include <SFML/Graphics.hpp>
 
+#include <iostream>
 #include <string>
 
 #include "input.h"
@@ -39,7 +45,33 @@ public:
 	void render(sf::RenderWindow& window);
 
 private:
-	sf::RectangleShape rect;
+	const sf::Color WHEEL_COLOR = sf::Color(100, 100, 100, 255);
+	const sf::Color DRIFTING_WHEEL_COLOR = sf::Color(170, 170, 170, 255); // this is kind of a temporary solution to indicate drifting, ideally it would be shown with skidmarks or something
+
+	const float KART_ACCLERATION = 0.075f;
+	const float KART_TURN_SPEED = 0.0175f;
+	const float KART_DRIFT_TURN_MULTI = 1.5f;
+
+	const float KART_DRIFT_DRAG = 0.9825f;
+	const float KART_BASE_DRAG = 0.99f;
+
+	const float KART_DRIFT_START_DRIFT = 1.5f;
+	const float KART_DRIFT_STOP_DRIFT = 1.0f;
+	const float KART_BASE_START_DRIFT = 10.0f;
+	const float KART_BASE_STOP_DRIFT = 8.0f;
+
+	const float KART_DRIFT_MAX_CHANGE = 0.0075f;
+	const float KART_BASE_MAX_CHANGE = 0.05f;
+
+	// Returns the current movement angle in radians
+	float getMovementAngle(float usedAngle);
+	// Returns true if the Kart has a positive (>= 0) forward velocity, false otherwise
+	bool isMovingForward();
+	// Updates xVelocity and yVelocity, by calculating the friction of the wheels, which encourages the car to move in the direction of the wheels
+	void doFriction();
+
+	sf::RectangleShape body;
+	sf::RectangleShape wheel;
 
 	Input* input;
 
@@ -52,4 +84,6 @@ private:
 	float xVelocity; // units/s
 	float yVelocity; // units/s
 	float angularVelocity; // deg/s | from collisions, other angle adjustments are going to come from direct calculations with wheel angle and whatnot
+
+	bool isDrifting;
 };

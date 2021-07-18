@@ -2,7 +2,7 @@
 
 int main()
 {
-    sf::RenderWindow window(sf::VideoMode(500, 500), "SFML works!");
+    sf::RenderWindow window(sf::VideoMode(1000, 1000), "Reinforcement Kart!");
     window.setFramerateLimit(60);
 
     KeyboardInput input;
