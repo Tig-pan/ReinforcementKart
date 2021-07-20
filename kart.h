@@ -15,6 +15,7 @@
 
 #include "input.h"
 #include "constants.h"
+#include "wall.h"
 
 /*
 A Kart controlled by an Input. The Karts are not made to act super realistically, just to be controlled in a
@@ -44,6 +45,9 @@ public:
 	*/
 	void render(sf::RenderWindow& window);
 
+	// Returns true if the kart is currently intersecting with the wall
+	bool intersectingWithWall(Wall& wall, sf::RenderWindow& debug);
+
 private:
 	const sf::Color WHEEL_COLOR = sf::Color(100, 100, 100, 255);
 	const sf::Color DRIFTING_WHEEL_COLOR = sf::Color(170, 170, 170, 255); // this is kind of a temporary solution to indicate drifting, ideally it would be shown with skidmarks or something
@@ -53,23 +57,26 @@ private:
 	const float KART_DRIFT_TURN_MULTI = 1.5f;
 
 	const float KART_DRAG = 0.995f;
-	const float KART_SOFT_SPEED_CAP = 5.0f;
+	const float KART_SOFT_SPEED_CAP = 4.0f;
 	const float KART_SOFT_SPEED_REDUCTION = 0.3f;
 
-	const float KART_DRIFT_START_DRIFT = 0.4f;
-	const float KART_DRIFT_STOP_DRIFT = 0.3f;
-	const float KART_BASE_START_DRIFT = 1.8f;
-	const float KART_BASE_STOP_DRIFT = 1.5f;
+	const float KART_DRIFT_START_DRIFT = 0.2f;
+	const float KART_DRIFT_STOP_DRIFT = 0.1f;
+	const float KART_BASE_START_DRIFT = 2.0f;
+	const float KART_BASE_STOP_DRIFT = 1.7f;
 
-	const float KART_DRIFT_MAX_CHANGE = 0.02f;
-	const float KART_BASE_MAX_CHANGE = 0.08f;
+	const float KART_DRIFT_MAX_CHANGE = 0.03f;
+	const float KART_BASE_MAX_CHANGE = 0.105f;
 
-	// Returns the current movement angle in radians
+	// Returns the current movement angle in radians, uses the usedAngle to compare against the velocity
 	float getMovementAngle(float usedAngle);
 	// Returns true if the Kart has a positive forward velocity, false otherwise
 	bool isMovingForward();
 	// Updates xVelocity and yVelocity, by calculating the friction of the wheels, which encourages the car to move in the direction of the wheels
 	void doFriction();
+
+	// Returns true if the lines intersect, also updates the output x and output y variables with the intersection point
+	bool getLineSegmentIntersection(float s1x1, float s1y1, float s1x2, float s1y2, float s2x1, float s2y1, float s2x2, float s2y2, float* ox, float* oy);
 
 	sf::RectangleShape body;
 	sf::RectangleShape wheel;

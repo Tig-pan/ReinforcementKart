@@ -28,6 +28,7 @@ int main()
         wA.render(window);
         wB.render(window);
         kart.render(window);
+        kart.intersectingWithWall(wA, window);
         window.display();
     }
 
