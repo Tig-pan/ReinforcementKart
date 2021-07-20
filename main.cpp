@@ -11,6 +11,13 @@ int main()
     Wall wA(100, 100, 200, 200, 2.0f, sf::Color::Red, sf::Color::Blue);
     Wall wB(300, 100, 350, 200, 2.0f, sf::Color::Red, sf::Color::Blue);
 
+    WallGroup* currentGroup = new WallGroup[1];
+    currentGroup[0].count = 2;
+    currentGroup[0].walls[0] = &wA;
+    currentGroup[0].walls[1] = &wB;
+
+    kart.updateWallGroups(currentGroup, 1);
+
     while (window.isOpen())
     {
         sf::Event e;
@@ -22,13 +29,13 @@ int main()
             }
         }
 
+        kart.tick();
         kart.update();
 
         window.clear();
         wA.render(window);
         wB.render(window);
         kart.render(window);
-        kart.intersectingWithWall(wA, window);
         window.display();
     }
 

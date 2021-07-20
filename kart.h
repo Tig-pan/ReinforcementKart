@@ -18,6 +18,17 @@
 #include "wall.h"
 
 /*
+* An enum to help with collision and other tasks related to the corners of the kart
+*/
+enum Corner
+{
+	FrontLeft,
+	FrontRight,
+	BackLeft,
+	BackRight
+};
+
+/*
 A Kart controlled by an Input. The Karts are not made to act super realistically, just to be controlled in a
 fun way that also allows for interesting tech and difficult to perform manuvers. To make sure the movement is fun
 yet challenging. Especially the physics with colliding isn't going to be super realistic.
@@ -36,8 +47,17 @@ public:
 	*/
 	Kart(std::string racerName, Input* input, sf::Color kartColor, float startX, float startY, float startAngle);
 
-	// Called every frame, updates the Karts position based on its physics
+	// Called every frame, updates the Karts velocity based on inputs
+	void tick();
+
+	// Called every frame, updates the Karts position based on its physics, called after all karts have done tick
 	void update();
+
+	/* Updates the current collidable wall groups
+
+	newWallGroups: An array of WallGroup to replace the current wallGroups variable
+	*/
+	void updateWallGroups(WallGroup* newWallGroups, int newWallGroupCount);
 
 	/* Renders the kart onto the window
 
@@ -45,14 +65,12 @@ public:
 	*/
 	void render(sf::RenderWindow& window);
 
-	// Returns true if the kart is currently intersecting with the wall
-	bool intersectingWithWall(Wall& wall, sf::RenderWindow& debug);
-
 private:
 	const sf::Color WHEEL_COLOR = sf::Color(100, 100, 100, 255);
 	const sf::Color DRIFTING_WHEEL_COLOR = sf::Color(170, 170, 170, 255); // this is kind of a temporary solution to indicate drifting, ideally it would be shown with skidmarks or something
 
 	const float KART_ACCLERATION = 0.075f;
+	const float KART_HANDLING = 2.5f;
 	const float KART_TURN_SPEED = 0.0175f;
 	const float KART_DRIFT_TURN_MULTI = 1.5f;
 
@@ -75,13 +93,18 @@ private:
 	// Updates xVelocity and yVelocity, by calculating the friction of the wheels, which encourages the car to move in the direction of the wheels
 	void doFriction();
 
+	// Checks for collisions with walls and other karts before executing the movement
+	void doCollisions();
 	// Returns true if the lines intersect, also updates the output x and output y variables with the intersection point
-	bool getLineSegmentIntersection(float s1x1, float s1y1, float s1x2, float s1y2, float s2x1, float s2y1, float s2x2, float s2y2, float* ox, float* oy);
+	bool getLineSegmentIntersection(float kx1, float ky1, float kx2, float ky2, float wx1, float wy1, float wx2, float wy2, float* ox, float* oy, float* otime);
 
 	sf::RectangleShape body;
 	sf::RectangleShape wheel;
 
 	Input* input;
+
+	int wallGroupCount;
+	WallGroup* wallGroups;
 
 	float xPosition;
 	float yPosition;

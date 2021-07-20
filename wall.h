@@ -34,3 +34,12 @@ private:
 	float x2;
 	float y2;
 };
+
+/*
+A WallGroup is used to group walls based on areas, so only the relevant walls need to be check for collision
+*/
+struct WallGroup
+{
+	int count;
+	Wall** walls;
+};

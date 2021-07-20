@@ -24,36 +24,42 @@ Kart::Kart(std::string racerName, Input* input, sf::Color kartColor, float start
 	wheel.setOrigin(KART_WHEEL_LENGTH / 2.0f, KART_WHEEL_WIDTH / 2.0f);
 }
 
-void Kart::update()
+void Kart::tick()
 {
-	/* This physics is incredibly preliminary, this will be hugely updated in the future, it is only currently included 
+	/* This physics is incredibly preliminary, this will be hugely updated in the future, it is only currently included
 	as a base line to use for experimenting with other features (i.e. map collision) */
 
 	input->update();
 
 	const float currentVelocity = sqrtf(xVelocity * xVelocity + yVelocity * yVelocity);
+
 	// approach the desired input
 	const float desiredWheelAngle = input->getSteering() * KART_WHEEL_ANGLE_LIMIT;
-	if (abs(wheelAngle - desiredWheelAngle) < 2.5f)
+	if (abs(wheelAngle - desiredWheelAngle) < KART_HANDLING)
 	{
 		wheelAngle = desiredWheelAngle;
 	}
 	else if (wheelAngle > desiredWheelAngle)
 	{
-		wheelAngle -= 2.5f;
+		wheelAngle -= KART_HANDLING;
 	}
 	else
 	{
-		wheelAngle += 2.5f;
+		wheelAngle += KART_HANDLING;
 	}
 
 	const float turningMulti = sqrtf(currentVelocity) * (isMovingForward() ? 1.0f : -1.0f) * (isDrifting ? KART_DRIFT_TURN_MULTI : 1.0f) * KART_TURN_SPEED;
-	angle += wheelAngle * turningMulti;
+	angle += wheelAngle * turningMulti; // TODO: this causes problems, because turning can cause the karts corners to pass through walls
 
-	const float movementMulti = input->getMovement() * (input->getMovement() < 0 ? 0.5f : 1.0f) * 
+	const float movementMulti = input->getMovement() * (input->getMovement() < 0 ? 0.5f : 1.0f) *
 		(currentVelocity > KART_SOFT_SPEED_CAP ? 1.0f - (currentVelocity - KART_SOFT_SPEED_CAP) * KART_SOFT_SPEED_REDUCTION : 1.0f) * KART_ACCLERATION;
 	xVelocity += cosf(angle * DEG_TO_RAD) * movementMulti;
 	yVelocity += sinf(angle * DEG_TO_RAD) * movementMulti;
+}
+
+void Kart::update()
+{
+	doCollisions();
 
 	// apply velocitys
 	xPosition += xVelocity;
@@ -64,6 +70,12 @@ void Kart::update()
 	yVelocity *= KART_DRAG;
 
 	doFriction();
+}
+
+void Kart::updateWallGroups(WallGroup* newWallGroups, int newWallGroupCount)
+{
+	wallGroupCount = newWallGroupCount;
+	wallGroups = newWallGroups;
 }
 
 void Kart::render(sf::RenderWindow& window)
@@ -165,59 +177,100 @@ void Kart::doFriction()
 	yVelocity -= yChange;
 }
 
-bool Kart::intersectingWithWall(Wall& wall, sf::RenderWindow& debug)
+void Kart::doCollisions()
 {
 	// calculate points for the corners of the kart
-	float kartFLX = xPosition + (sinf(angle * DEG_TO_RAD) * KART_WIDTH / 2.0f) + (cosf(angle * DEG_TO_RAD) * KART_LENGTH / 2.0f);
-	float kartFLY = yPosition - (cosf(angle * DEG_TO_RAD) * KART_WIDTH / 2.0f) + (sinf(angle * DEG_TO_RAD) * KART_LENGTH / 2.0f);
+	const float cosAngle = cosf(angle * DEG_TO_RAD);
+	const float cosAngleWidth = cosAngle * KART_WIDTH / 2.0f;
+	const float cosAngleLength = cosAngle * KART_LENGTH / 2.0f;
 
-	float kartFRX = xPosition - (sinf(angle * DEG_TO_RAD) * KART_WIDTH / 2.0f) + (cosf(angle * DEG_TO_RAD) * KART_LENGTH / 2.0f);
-	float kartFRY = yPosition + (cosf(angle * DEG_TO_RAD) * KART_WIDTH / 2.0f) + (sinf(angle * DEG_TO_RAD) * KART_LENGTH / 2.0f);
+	const float sinAngle = cosf(angle * DEG_TO_RAD);
+	const float sinAngleWidth = sinAngle * KART_WIDTH / 2.0f;
+	const float sinAngleLength = sinAngle * KART_LENGTH / 2.0f;
 
-	float kartBLX = xPosition + (sinf(angle * DEG_TO_RAD) * KART_WIDTH / 2.0f) - (cosf(angle * DEG_TO_RAD) * KART_LENGTH / 2.0f);
-	float kartBLY = yPosition - (cosf(angle * DEG_TO_RAD) * KART_WIDTH / 2.0f) - (sinf(angle * DEG_TO_RAD) * KART_LENGTH / 2.0f);
+	const float kartFLX = xPosition + sinAngleWidth + cosAngleLength;
+	const float kartFLY = yPosition - cosAngleWidth + sinAngleLength;
 
-	float kartBRX = xPosition - (sinf(angle * DEG_TO_RAD) * KART_WIDTH / 2.0f) - (cosf(angle * DEG_TO_RAD) * KART_LENGTH / 2.0f);
-	float kartBRY = yPosition + (cosf(angle * DEG_TO_RAD) * KART_WIDTH / 2.0f) - (sinf(angle * DEG_TO_RAD) * KART_LENGTH / 2.0f);
+	const float kartFRX = xPosition - sinAngleWidth + cosAngleLength;
+	const float kartFRY = yPosition + cosAngleWidth + sinAngleLength;
 
+	const float kartBLX = xPosition + sinAngleWidth - cosAngleLength;
+	const float kartBLY = yPosition - cosAngleWidth - sinAngleLength;
+
+	const float kartBRX = xPosition - sinAngleWidth - cosAngleLength;
+	const float kartBRY = yPosition + cosAngleWidth - sinAngleLength;
+
+	Corner corner;
 	float intersectX;
 	float intersectY;
+	float time = 2.0f;
 
-	// then test if any of those 4 lines made from connecting the corners of the kart collide with the wall
-	if (getLineSegmentIntersection(kartFLX, kartFLY, kartFRX, kartFRY, wall.getX1(), wall.getY1(), wall.getX2(), wall.getY2(), &intersectX, &intersectY) ||
-		getLineSegmentIntersection(kartFRX, kartFRY, kartBRX, kartBRY, wall.getX1(), wall.getY1(), wall.getX2(), wall.getY2(), &intersectX, &intersectY) ||
-		getLineSegmentIntersection(kartBRX, kartBRY, kartBLX, kartBLY, wall.getX1(), wall.getY1(), wall.getX2(), wall.getY2(), &intersectX, &intersectY) ||
-		getLineSegmentIntersection(kartBLX, kartBLY, kartFLX, kartFLY, wall.getX1(), wall.getY1(), wall.getX2(), wall.getY2(), &intersectX, &intersectY))
+	for (int group = 0; group < wallGroupCount; group++)
 	{
-		body.setFillColor(sf::Color::Red); // temp debug
-		return true;
+		for (int i = 0; i < wallGroups[group].count; i++)
+		{
+			Wall* wall = wallGroups[group].walls[i];
+
+			if (getLineSegmentIntersection(kartFLX, kartFLY, kartFLX + xVelocity, kartFLY + yVelocity,
+				wall->getX1(), wall->getY1(), wall->getX2(), wall->getY2(), &intersectX, &intersectY, &time))
+			{
+				corner = Corner::FrontLeft;
+			}
+			if (getLineSegmentIntersection(kartFRX, kartFRY, kartFRX + xVelocity, kartFRY + yVelocity,
+				wall->getX1(), wall->getY1(), wall->getX2(), wall->getY2(), &intersectX, &intersectY, &time))
+			{
+				corner = Corner::FrontRight;
+			}
+			if (getLineSegmentIntersection(kartBLX, kartBLY, kartBLX + xVelocity, kartBLY + yVelocity,
+				wall->getX1(), wall->getY1(), wall->getX2(), wall->getY2(), &intersectX, &intersectY, &time))
+			{
+				corner = Corner::BackLeft;
+			}
+			if (getLineSegmentIntersection(kartBRX, kartBRY, kartBRX + xVelocity, kartBRY + yVelocity,
+				wall->getX1(), wall->getY1(), wall->getX2(), wall->getY2(), &intersectX, &intersectY, &time))
+			{
+				corner = Corner::BackRight;
+			}
+		}
 	}
 
-	body.setFillColor(sf::Color::Yellow); // temp debug
-	return false;
+	if (time <= 1.0f)
+	{
+		body.setFillColor(sf::Color::Red); // temp debug
+		xVelocity *= -0.5f;
+		yVelocity *= -0.5f;
+	}
+	else
+	{
+		body.setFillColor(sf::Color::Yellow); // temp debug
+	}
 }
 
-bool Kart::getLineSegmentIntersection(float s1x1, float s1y1, float s1x2, float s1y2, float s2x1, float s2y1, float s2x2, float s2y2, float* ox, float* oy)
+bool Kart::getLineSegmentIntersection(float kx1, float ky1, float kx2, float ky2, float wx1, float wy1, float wx2, float wy2, float* ox, float* oy, float* otime)
 {
-	float lineAX = s1x2 - s1x1;
-	float lineAY = s1y2 - s1y1;
-	float lineBX = s2x2 - s2x1;
-	float lineBY = s2y2 - s2y1;
+	// the k's refer to the kart, the w's refer to the wall or whatever else is being checked against, the o's are the out's and receive values in the event of a collision
+	// to use this in a raycast scenario, have k1 be the starting position, and k2 be the next position
+	float lineKX = kx2 - kx1;
+	float lineKY = ky2 - ky1;
+	float lineWX = wx2 - wx1;
+	float lineWY = wy2 - wy1;
 
-	float denominator = lineAX * lineBY - lineBX * lineAY;
+	float denominator = lineKX * lineWY - lineKY * lineWX;
 	if (denominator == 0.0f) // lines are parallel, and therefore don't intersect
 	{
 		return false;
 	}
-	float xFraction = (lineAX * (s1y1 - s2y1) - lineAY * (s1x1 - s2x1)) / denominator;
-	float yFraction = (lineBX * (s1y1 - s2y1) - lineBY * (s1x1 - s2x1)) / denominator;
+	float kFraction = (lineKX * (ky1 - wy1) - lineKY * (kx1 - wx1)) / denominator; // aka time
+	float wFraction = (lineWX * (ky1 - wy1) - lineWY * (kx1 - wx1)) / denominator;
 
-	if (xFraction >= 0 && xFraction <= 1 && yFraction >= 0 && yFraction <= 1)
+	if (kFraction >= 0 && kFraction <= 1 && wFraction >= 0 && wFraction <= 1 && kFraction < *otime)
 	{
-		*ox = s1x1 + xFraction * lineAX;
-		*oy = s1y1 + yFraction * lineAY;
+		// only overwrite the time if this one is shorter
+		*otime = kFraction;
+		*ox = kx1 + kFraction * lineKX;
+		*oy = ky1 + kFraction * lineKY;
 
-		return true;
+		return true; // only return true if this is the first collision (kFraction < *otime)
 	}
 
 	return false;
