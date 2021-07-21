@@ -99,13 +99,13 @@ void Kart::render(sf::RenderWindow& window)
 
 	wheel.setRotation(angle + wheelAngle);
 
-	float cosAngle = cosf(angle * DEG_TO_RAD);
-	float cosAngleWidth = cosAngle * (KART_WIDTH / 2.0f);
-	float cosAngleLength = cosAngle * (KART_LENGTH / 4.0f);
+	const float cosAngle = cosf(angle * DEG_TO_RAD);
+	const float cosAngleWidth = cosAngle * (KART_WIDTH / 2.0f);
+	const float cosAngleLength = cosAngle * (KART_LENGTH / 4.0f);
 
-	float sinAngle = sinf(angle * DEG_TO_RAD);
-	float sinAngleWidth = sinAngle * (KART_WIDTH / 2.0f);
-	float sinAngleLength = sinAngle * (KART_LENGTH / 4.0f);
+	const float sinAngle = sinf(angle * DEG_TO_RAD);
+	const float sinAngleWidth = sinAngle * (KART_WIDTH / 2.0f);
+	const float sinAngleLength = sinAngle * (KART_LENGTH / 4.0f);
 
 	wheel.setPosition(
 		xPosition + sinAngleWidth + cosAngleLength,
@@ -134,33 +134,16 @@ void Kart::render(sf::RenderWindow& window)
 	window.draw(body);
 }
 
-float Kart::getAngleBetween(float vectorX, float vectorY, float normalX, float normalY)
-{
-	const float vectorMagnitude = sqrtf(vectorX * vectorX + vectorY * vectorY);
-	if (vectorMagnitude < 0.01f) // essentially zero
-	{
-		return 0.0f;
-	}
-
-	const float dot = vectorX * normalX + vectorY * normalY;
-	if (dot == vectorMagnitude) // this is mainly because acosf kinda freaks out when given exactly 1
-	{
-		return 0.0f;
-	}
-	return acosf(dot / vectorMagnitude);
-}
-
 float Kart::getAngleBetween(float vectorX, float vectorY, float usedAngle)
 {
-	// could also call the other version of getAngleBetween, but use cos and sin as the parameters for the normal, but i choose not to
 	const float vectorMagnitude = sqrtf(vectorX * vectorX + vectorY * vectorY);
-	if (vectorMagnitude < 0.01f) // essentially zero
+	if (vectorMagnitude < 0.001f) // essentially zero
 	{
 		return 0.0f;
 	}
 
 	const float dot = vectorX * cosf(usedAngle * DEG_TO_RAD) + vectorY * sinf(usedAngle * DEG_TO_RAD);
-	if (dot == vectorMagnitude) // this is mainly because acosf kinda freaks out when given exactly 1
+	if (dot > vectorMagnitude - 0.001f) // this is mainly because acosf kinda freaks out when given exactly 1
 	{
 		return 0.0f;
 	}
@@ -209,141 +192,179 @@ void Kart::doFriction()
 
 void Kart::doCollisions()
 {
-	// calculate points for the corners of the kart, before and after the expected movement
-	float cosAngle = cosf(angle * DEG_TO_RAD);
-	float cosAngleWidth = cosAngle * (KART_WIDTH / 2.0f);
-	float cosAngleLength = cosAngle * (KART_LENGTH / 2.0f);
+	bool collisionThisIteration = false;
 
-	float sinAngle = sinf(angle * DEG_TO_RAD);
-	float sinAngleWidth = sinAngle * (KART_WIDTH / 2.0f);
-	float sinAngleLength = sinAngle * (KART_LENGTH / 2.0f);
-
-	const float beforeFLX = xPosition + sinAngleWidth + cosAngleLength;
-	const float beforeFLY = yPosition - cosAngleWidth + sinAngleLength;
-
-	const float beforeFRX = xPosition - sinAngleWidth + cosAngleLength;
-	const float beforeFRY = yPosition + cosAngleWidth + sinAngleLength;
-
-	const float beforeBLX = xPosition + sinAngleWidth - cosAngleLength;
-	const float beforeBLY = yPosition - cosAngleWidth - sinAngleLength;
-
-	const float beforeBRX = xPosition - sinAngleWidth - cosAngleLength;
-	const float beforeBRY = yPosition + cosAngleWidth - sinAngleLength;
-
-	cosAngle = cosf((angle + angularVelocity + kartSpin) * DEG_TO_RAD);
-	cosAngleWidth = cosAngle * (KART_WIDTH / 2.0f);
-	cosAngleLength = cosAngle * (KART_LENGTH / 2.0f);
-
-	sinAngle = sinf((angle + angularVelocity + kartSpin) * DEG_TO_RAD);
-	sinAngleWidth = sinAngle * (KART_WIDTH / 2.0f);
-	sinAngleLength = sinAngle * (KART_LENGTH / 2.0f);
-
-	const float afterFLX = xPosition + sinAngleWidth + cosAngleLength + xVelocity;
-	const float afterFLY = yPosition - cosAngleWidth + sinAngleLength + yVelocity;
-
-	const float afterFRX = xPosition - sinAngleWidth + cosAngleLength + xVelocity;
-	const float afterFRY = yPosition + cosAngleWidth + sinAngleLength + yVelocity;
-
-	const float afterBLX = xPosition + sinAngleWidth - cosAngleLength + xVelocity;
-	const float afterBLY = yPosition - cosAngleWidth - sinAngleLength + yVelocity;
-
-	const float afterBRX = xPosition - sinAngleWidth - cosAngleLength + xVelocity;
-	const float afterBRY = yPosition + cosAngleWidth - sinAngleLength + yVelocity;
-
-	Corner corner;
-	float xIntersect;
-	float yIntersect;
-	float xNormal;
-	float yNormal;
-	float time = 2.0f;
-
-	for (int group = 0; group < wallGroupCount; group++)
+	const int ITER_CAP = 2;
+	for (int iter = 0; iter <= ITER_CAP && (iter == 0 || collisionThisIteration); iter++)
 	{
-		for (int i = 0; i < wallGroups[group].count; i++)
-		{
-			Wall* wall = wallGroups[group].walls[i];
+		// calculate points for the corners of the kart, before and after the expected movement
+		float cosAngle = cosf(angle * DEG_TO_RAD);
+		float cosAngleWidth = cosAngle * (KART_WIDTH / 2.0f);
+		float cosAngleLength = cosAngle * (KART_LENGTH / 2.0f);
 
-			if (getLineSegmentIntersection(beforeFLX, beforeFLY, afterFLX, afterFLY,
-				wall->getX1(), wall->getY1(), wall->getX2(), wall->getY2(), &xIntersect, &yIntersect, &xNormal, &yNormal, &time))
+		float sinAngle = sinf(angle * DEG_TO_RAD);
+		float sinAngleWidth = sinAngle * (KART_WIDTH / 2.0f);
+		float sinAngleLength = sinAngle * (KART_LENGTH / 2.0f);
+
+		const float beforeFLX = xPosition + sinAngleWidth + cosAngleLength;
+		const float beforeFLY = yPosition - cosAngleWidth + sinAngleLength;
+
+		const float beforeFRX = xPosition - sinAngleWidth + cosAngleLength;
+		const float beforeFRY = yPosition + cosAngleWidth + sinAngleLength;
+
+		const float beforeBLX = xPosition + sinAngleWidth - cosAngleLength;
+		const float beforeBLY = yPosition - cosAngleWidth - sinAngleLength;
+
+		const float beforeBRX = xPosition - sinAngleWidth - cosAngleLength;
+		const float beforeBRY = yPosition + cosAngleWidth - sinAngleLength;
+
+		cosAngle = cosf((angle + angularVelocity + kartSpin) * DEG_TO_RAD);
+		cosAngleWidth = cosAngle * (KART_WIDTH / 2.0f);
+		cosAngleLength = cosAngle * (KART_LENGTH / 2.0f);
+
+		sinAngle = sinf((angle + angularVelocity + kartSpin) * DEG_TO_RAD);
+		sinAngleWidth = sinAngle * (KART_WIDTH / 2.0f);
+		sinAngleLength = sinAngle * (KART_LENGTH / 2.0f);
+
+		const float afterFLX = xPosition + sinAngleWidth + cosAngleLength + xVelocity;
+		const float afterFLY = yPosition - cosAngleWidth + sinAngleLength + yVelocity;
+
+		const float afterFRX = xPosition - sinAngleWidth + cosAngleLength + xVelocity;
+		const float afterFRY = yPosition + cosAngleWidth + sinAngleLength + yVelocity;
+
+		const float afterBLX = xPosition + sinAngleWidth - cosAngleLength + xVelocity;
+		const float afterBLY = yPosition - cosAngleWidth - sinAngleLength + yVelocity;
+
+		const float afterBRX = xPosition - sinAngleWidth - cosAngleLength + xVelocity;
+		const float afterBRY = yPosition + cosAngleWidth - sinAngleLength + yVelocity;
+
+		Corner corner;
+		float xIntersect;
+		float yIntersect;
+		float xNormal;
+		float yNormal;
+		float time = 2.0f;
+
+		for (int group = 0; group < wallGroupCount; group++)
+		{
+			for (int i = 0; i < wallGroups[group].count; i++)
 			{
-				corner = Corner::FrontLeft;
-			}
-			if (getLineSegmentIntersection(beforeFRX, beforeFRY, afterFRX, afterFRY,
-				wall->getX1(), wall->getY1(), wall->getX2(), wall->getY2(), &xIntersect, &yIntersect, &xNormal, &yNormal, &time))
-			{
-				corner = Corner::FrontRight;
-			}
-			if (getLineSegmentIntersection(beforeBLX, beforeBLY, afterBLX, afterBLY,
-				wall->getX1(), wall->getY1(), wall->getX2(), wall->getY2(), &xIntersect, &yIntersect, &xNormal, &yNormal, &time))
-			{
-				corner = Corner::BackLeft;
-			}
-			if (getLineSegmentIntersection(beforeBRX, beforeBRY, afterBRX, afterBRY,
-				wall->getX1(), wall->getY1(), wall->getX2(), wall->getY2(), &xIntersect, &yIntersect, &xNormal, &yNormal, &time))
-			{
-				corner = Corner::BackRight;
+				Wall* wall = wallGroups[group].walls[i];
+
+				if (getLineSegmentIntersection(beforeFLX, beforeFLY, afterFLX, afterFLY,
+					wall->getX1(), wall->getY1(), wall->getX2(), wall->getY2(), &xIntersect, &yIntersect, &xNormal, &yNormal, &time))
+				{
+					corner = Corner::FrontLeft;
+				}
+				if (getLineSegmentIntersection(beforeFRX, beforeFRY, afterFRX, afterFRY,
+					wall->getX1(), wall->getY1(), wall->getX2(), wall->getY2(), &xIntersect, &yIntersect, &xNormal, &yNormal, &time))
+				{
+					corner = Corner::FrontRight;
+				}
+				if (getLineSegmentIntersection(beforeBLX, beforeBLY, afterBLX, afterBLY,
+					wall->getX1(), wall->getY1(), wall->getX2(), wall->getY2(), &xIntersect, &yIntersect, &xNormal, &yNormal, &time))
+				{
+					corner = Corner::BackLeft;
+				}
+				if (getLineSegmentIntersection(beforeBRX, beforeBRY, afterBRX, afterBRY,
+					wall->getX1(), wall->getY1(), wall->getX2(), wall->getY2(), &xIntersect, &yIntersect, &xNormal, &yNormal, &time))
+				{
+					corner = Corner::BackRight;
+				}
 			}
 		}
-	}
 
-	if (time <= 1.0f)
-	{
-		kartSpin = 0.0f;
-		angularVelocity = 0.0f;
-
-		float angleBetweenA = getAngleBetween(xNormal, yNormal, angle);
-		float angleBetweenB = getAngleBetween(-xNormal, -yNormal, angle); // the normal might have to be flipped, so we can just do both and take the lowest
-		float angleBetween = (angleBetweenA < angleBetweenB ? angleBetweenA : angleBetweenB) * RAD_TO_DEG; // its probably unoptimal instead of just getting the correct normal, but its acceptable for now
-
-		// reflection angle of a vector is: r = v - 2*n*dot(v,n) (n must be normalized)
-		float dot = xVelocity * xNormal + yVelocity * yNormal;
-		float velocityMagnitude = sqrt(xVelocity * xVelocity + yVelocity * yVelocity);
-		float reduction;
-		if (velocityMagnitude == 0.0f)
+		if (time <= 1.0f)
 		{
-			reduction = KART_ELASTICITY;
+			collisionThisIteration = true;
+
+			kartSpin = 0.0f;
+			angularVelocity = 0.0f;
+
+			if (iter != ITER_CAP)
+			{
+				const float angleBetween = getAngleBetween(xNormal, yNormal, angle) * RAD_TO_DEG;
+
+				// reflection angle of a vector is: r = v - 2*n*dot(v,n) (n must be normalized)
+				const float dot = xVelocity * xNormal + yVelocity * yNormal;
+				const float velocityMagnitude = sqrt(xVelocity * xVelocity + yVelocity * yVelocity);
+				float reduction;
+				if (velocityMagnitude == 0.0f)
+				{
+					reduction = KART_ELASTICITY;
+				}
+				else
+				{
+					reduction = 1.0f - KART_BASE_BOUNCE_REDUCE - abs(dot / velocityMagnitude) * (1.0f - KART_ELASTICITY - KART_BASE_BOUNCE_REDUCE);
+				}
+				xVelocity = (xVelocity - 2.0f * xNormal * dot) * reduction;
+				yVelocity = (yVelocity - 2.0f * yNormal * dot) * reduction;
+
+				// after reflection, calculate kart spin by using the angle of incidence
+				if (angleBetween <= 90.0f) // going forwards into the wall
+				{
+					float spin = (3.0f * KART_ELASTICITY + velocityMagnitude) * sqrtf(angleBetween * (90.0f - angleBetween)) * KART_SPIN_MULTIPLIER * KART_ELASTICITY;
+
+					if (corner == Corner::FrontLeft)
+					{
+						if (angleBetween > 40.0f) // greater than a 40 degree bounce, so spin outwards (should be 45, but giving some leeway)
+						{
+							kartSpin = spin;
+						}
+						else // less than a 40 degree bounce, so spin inwards
+						{
+							kartSpin = -spin;
+						}
+					}
+					else // by defininition only the front two wheels can get it when the angle is less than 90
+					{
+						if (angleBetween > 40.0f) // greater than a 40 degree bounce, so spin outwards (should be 45, but giving some leeway)
+						{
+							kartSpin = -spin;
+						}
+						else // less than a 40 degree bounce, so spin inwards
+						{
+							kartSpin = spin;
+						}
+					}
+				}
+				else // backing into it
+				{
+					float spin = (3.0f * KART_ELASTICITY + velocityMagnitude) * sqrtf((angleBetween - 90.0f) * (180.0f - angleBetween)) * KART_SPIN_MULTIPLIER* KART_ELASTICITY;
+
+					if (corner == Corner::BackLeft)
+					{
+						if (angleBetween > 140.0f) // less than a 40 degree bounce, so spin inwards (should be 45, but giving some leeway)
+						{
+							kartSpin = spin;
+						}
+						else // less than a 40 degree bounce, so spin outwards
+						{
+							kartSpin = -spin;
+						}
+					}
+					else
+					{
+						if (angleBetween > 140.0f) // less than a 40 degree bounce, so spin inwards (should be 45, but giving some leeway)
+						{
+							kartSpin = -spin;
+						}
+						else // less than a 40 degree bounce, so spin outwards
+						{
+							kartSpin = spin;
+						}
+					}
+				}
+			}
+			else // if too many collisions on one frame, just give up and say nothing happens
+			{
+				xVelocity = 0.0f;
+				yVelocity = 0.0f;
+			}
 		}
 		else
 		{
-			reduction = 1.0f - abs(dot / velocityMagnitude) * (1.0f - KART_ELASTICITY);
-		}
-		xVelocity = (xVelocity - 2 * xNormal * dot) * reduction;
-		yVelocity = (yVelocity - 2 * yNormal * dot) * reduction;
-
-		// after reflection, calculate kart spin by using the angle of incidence
-		if (corner == Corner::FrontLeft)
-		{
-			if (angleBetween > 40.0f) // greater than a 40 degree bounce, so spin outwards (should be 45, but giving some leeway)
-			{
-				kartSpin = (1.0f + velocityMagnitude) * (90.0f - angleBetween) * 0.0333f * KART_ELASTICITY;
-			}
-			else // less than a 40 degree bounce, so spin inwards
-			{
-				kartSpin = -(1.0f + velocityMagnitude) * (angleBetween) * 0.0333f * KART_ELASTICITY;
-			}
-		}
-		else if (corner == Corner::FrontRight)
-		{
-			if (angleBetween > 40.0f) // greater than a 40 degree bounce, so spin outwards (should be 45, but giving some leeway)
-			{
-				kartSpin = -(1.0f + velocityMagnitude) * (90.0f - angleBetween) * 0.0333f * KART_ELASTICITY;
-			}
-			else // less than a 40 degree bounce, so spin inwards
-			{
-				kartSpin = (1.0f + velocityMagnitude) * (angleBetween) * 0.0333f * KART_ELASTICITY;
-			}
-		}
-		else if (corner == Corner::BackLeft)
-		{
-			// always spin inwards
-
-			kartSpin = -(1.0f + velocityMagnitude) * (angleBetween) * 0.0333f * KART_ELASTICITY;
-		}
-		else
-		{
-			// always spin inwards
-
-			kartSpin = (1.0f + velocityMagnitude) * (angleBetween) * 0.0333f * KART_ELASTICITY;
+			collisionThisIteration = false;
 		}
 	}
 }
@@ -372,8 +393,16 @@ bool Kart::getLineSegmentIntersection(float kx1, float ky1, float kx2, float ky2
 		*ox = kx1 + kFraction * lineKX;
 		*oy = ky1 + kFraction * lineKY;
 		float normalMagnitude = sqrtf(lineWX * lineWX + lineWY * lineWY);
-		*onx = -lineWY / normalMagnitude; // x normal
-		*ony = lineWX / normalMagnitude; // y normal
+		if ((lineWX == 0.0f && kx1 < *ox) || (ky1 < (lineWY / lineWX) * (kx1 - wx1) + wy1))
+		{
+			*onx = -lineWY / normalMagnitude; // x normal
+			*ony = lineWX / normalMagnitude; // y normal
+		}
+		else
+		{
+			*onx = lineWY / normalMagnitude; // x normal
+			*ony = -lineWX / normalMagnitude; // y normal
+		}
 
 		return true; // only return true if this is the first collision (kFraction < *otime)
 	}

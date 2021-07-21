@@ -86,11 +86,11 @@ private:
 	const float KART_DRIFT_MAX_CHANGE = 0.03f;
 	const float KART_BASE_MAX_CHANGE = 0.105f;
 
+	const float KART_BASE_BOUNCE_REDUCE = 0.15f;
 	const float KART_ELASTICITY = 0.3f;
-	const float KART_SPIN_FALLOFF = 0.95f;
+	const float KART_SPIN_MULTIPLIER = 0.05f;
+	const float KART_SPIN_FALLOFF = 0.94f;
 
-	// Returns the angle between the vector and the second normalized vector in radians, the normal vector must be normalized
-	float getAngleBetween(float vectorX, float vectorY, float normalX, float normalY);
 	// Returns the angle between the vector and the given angle in radians, uses the usedAngle to compare against the vector
 	float getAngleBetween(float vectorX, float vectorY, float usedAngle);
 	// Returns true if the Kart has a positive forward velocity, false otherwise
