@@ -20,7 +20,7 @@
 /*
 * An enum to help with collision and other tasks related to the corners of the kart
 */
-enum Corner
+enum class Corner
 {
 	FrontLeft,
 	FrontRight,
@@ -86,8 +86,13 @@ private:
 	const float KART_DRIFT_MAX_CHANGE = 0.03f;
 	const float KART_BASE_MAX_CHANGE = 0.105f;
 
-	// Returns the current movement angle in radians, uses the usedAngle to compare against the velocity
-	float getMovementAngle(float usedAngle);
+	const float KART_ELASTICITY = 0.3f;
+	const float KART_SPIN_FALLOFF = 0.95f;
+
+	// Returns the angle between the vector and the second normalized vector in radians, the normal vector must be normalized
+	float getAngleBetween(float vectorX, float vectorY, float normalX, float normalY);
+	// Returns the angle between the vector and the given angle in radians, uses the usedAngle to compare against the vector
+	float getAngleBetween(float vectorX, float vectorY, float usedAngle);
 	// Returns true if the Kart has a positive forward velocity, false otherwise
 	bool isMovingForward();
 	// Updates xVelocity and yVelocity, by calculating the friction of the wheels, which encourages the car to move in the direction of the wheels
@@ -96,7 +101,7 @@ private:
 	// Checks for collisions with walls and other karts before executing the movement
 	void doCollisions();
 	// Returns true if the lines intersect, also updates the output x and output y variables with the intersection point
-	bool getLineSegmentIntersection(float kx1, float ky1, float kx2, float ky2, float wx1, float wy1, float wx2, float wy2, float* ox, float* oy, float* otime);
+	bool getLineSegmentIntersection(float kx1, float ky1, float kx2, float ky2, float wx1, float wy1, float wx2, float wy2, float* ox, float* oy, float* onx, float* ony, float* otime);
 
 	sf::RectangleShape body;
 	sf::RectangleShape wheel;
@@ -114,7 +119,8 @@ private:
 
 	float xVelocity; // units/s
 	float yVelocity; // units/s
-	float angularVelocity; // deg/s | from collisions, other angle adjustments are going to come from direct calculations with wheel angle and whatnot
+	float angularVelocity; // deg/s
+	float kartSpin; // deg/s
 
 	bool isDrifting;
 };
