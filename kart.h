@@ -16,6 +16,7 @@
 #include "input.h"
 #include "constants.h"
 #include "wall.h"
+#include "checkpoint.h"
 
 /*
 * An enum to help with collision and other tasks related to the corners of the kart
@@ -45,19 +46,13 @@ public:
 	startY: a float representing the initial y position of the kart
 	startAngle: a float representing the initial angle of the kart (in degrees)
 	*/
-	Kart(std::string racerName, Input* input, sf::Color kartColor, float startX, float startY, float startAngle);
+	Kart(std::string racerName, Input* input, sf::Color kartColor, float startX, float startY, float startAngle, Checkpoint** race, int checkpointCount);
 
 	// Called every frame, updates the Karts velocity based on inputs
 	void tick();
 
 	// Called every frame, updates the Karts position based on its physics, called after all karts have done tick
 	void update();
-
-	/* Updates the current collidable wall groups
-
-	newWallGroups: An array of WallGroup to replace the current wallGroups variable
-	*/
-	void updateWallGroups(WallGroup* newWallGroups, int newWallGroupCount);
 
 	/* Renders the kart onto the window
 
@@ -100,6 +95,8 @@ private:
 
 	// Checks for collisions with walls and other karts before executing the movement
 	void doCollisions();
+	// Checks for passing checkpoints in order to progress in the race and 
+	void doCheckpoints(float xPositionBefore, float yPositionBefore);
 	// Returns true if the lines intersect, also updates the output x and output y variables with the intersection point
 	bool getLineSegmentIntersection(float kx1, float ky1, float kx2, float ky2, float wx1, float wy1, float wx2, float wy2, float* ox, float* oy, float* onx, float* ony, float* otime);
 
@@ -107,9 +104,12 @@ private:
 	sf::RectangleShape wheel;
 
 	Input* input;
+	Checkpoint** race;
+	int checkpointCount;
 
-	int wallGroupCount;
-	WallGroup* wallGroups;
+	int currentCheckpoint;
+	int furthestCheckpoint;
+	int lapNumber;
 
 	float xPosition;
 	float yPosition;

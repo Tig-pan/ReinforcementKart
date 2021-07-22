@@ -6,7 +6,6 @@ int main()
     window.setFramerateLimit(60);
 
     KeyboardInput input;
-    Kart kart("Test", &input, sf::Color::Yellow, 550, 550, -40);
 
     Wall wA(500, 600, 1000, 400, 2.0f, sf::Color::Blue, sf::Color::Blue);
 
@@ -27,26 +26,32 @@ int main()
     Wall wN(450, 750, 550, 750, 2.0f, sf::Color::Cyan, sf::Color::Cyan);
     Wall wO(1050, 250, 950, 250, 2.0f, sf::Color::Cyan, sf::Color::Cyan);
 
-    WallGroup* currentGroup = new WallGroup[1];
-    currentGroup[0].count = 15;
-    currentGroup[0].walls = new Wall*[15];
-    currentGroup[0].walls[0] = &wA;
-    currentGroup[0].walls[1] = &wB;
-    currentGroup[0].walls[2] = &wC;
-    currentGroup[0].walls[3] = &wD;
-    currentGroup[0].walls[4] = &wE;
-    currentGroup[0].walls[5] = &wF;
-    currentGroup[0].walls[6] = &wG;
-    currentGroup[0].walls[7] = &wH;
-    currentGroup[0].walls[8] = &wI;
-    currentGroup[0].walls[9] = &wJ;
-    currentGroup[0].walls[10] = &wK;
-    currentGroup[0].walls[11] = &wL;
-    currentGroup[0].walls[12] = &wM;
-    currentGroup[0].walls[13] = &wN;
-    currentGroup[0].walls[14] = &wO;
+    WallGroup raceGroup;
+    raceGroup.count = 15;
+    raceGroup.walls = new Wall*[15];
+    raceGroup.walls[0] = &wA;
+    raceGroup.walls[1] = &wB;
+    raceGroup.walls[2] = &wC;
+    raceGroup.walls[3] = &wD;
+    raceGroup.walls[4] = &wE;
+    raceGroup.walls[5] = &wF;
+    raceGroup.walls[6] = &wG;
+    raceGroup.walls[7] = &wH;
+    raceGroup.walls[8] = &wI;
+    raceGroup.walls[9] = &wJ;
+    raceGroup.walls[10] = &wK;
+    raceGroup.walls[11] = &wL;
+    raceGroup.walls[12] = &wM;
+    raceGroup.walls[13] = &wN;
+    raceGroup.walls[14] = &wO;
 
-    kart.updateWallGroups(currentGroup, 1);
+    Checkpoint** race = new Checkpoint*[4];
+    race[0] = new Checkpoint(950, 250, 900, 50, raceGroup);
+    race[1] = new Checkpoint(1050, 250, 1300, 400, raceGroup);
+    race[2] = new Checkpoint(550, 750, 600, 950, raceGroup);
+    race[3] = new Checkpoint(450, 750, 200, 600, raceGroup);
+
+    Kart kart("Test", &input, sf::Color::Yellow, 550, 550, -40, race, 4);
 
     while (window.isOpen())
     {

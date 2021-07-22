@@ -1,10 +1,16 @@
 #include "kart.h"
 
-Kart::Kart(std::string racerName, Input* input, sf::Color kartColor, float startX, float startY, float startAngle)
+Kart::Kart(std::string racerName, Input* input, sf::Color kartColor, float startX, float startY, float startAngle, Checkpoint** race, int checkpointCount)
 	: body(sf::Vector2f(KART_LENGTH, KART_WIDTH)) // the x component is the length, and the y is width. this is because the angle 0 is straight to the right
 	, wheel(sf::Vector2f(KART_WHEEL_LENGTH, KART_WHEEL_WIDTH))
 
 	, input(input)
+	, race(race)
+
+	, checkpointCount(checkpointCount)
+	, currentCheckpoint(0)
+	, furthestCheckpoint(0)
+	, lapNumber(0)
 
 	, xPosition(startX)
 	, yPosition(startY)
@@ -62,10 +68,15 @@ void Kart::update()
 {
 	doCollisions();
 
+	float xPositionBefore = xPosition;
+	float yPositionBefore = yPosition;
+
 	// apply velocitys
 	angle += angularVelocity + kartSpin;
 	xPosition += xVelocity;
 	yPosition += yVelocity;
+
+	doCheckpoints(xPositionBefore, yPositionBefore);
 
 	// drag and friction
 	xVelocity *= KART_DRAG;
@@ -74,12 +85,6 @@ void Kart::update()
 	kartSpin *= KART_SPIN_FALLOFF;
 
 	doFriction();
-}
-
-void Kart::updateWallGroups(WallGroup* newWallGroups, int newWallGroupCount)
-{
-	wallGroupCount = newWallGroupCount;
-	wallGroups = newWallGroups;
 }
 
 void Kart::render(sf::RenderWindow& window)
@@ -147,6 +152,10 @@ float Kart::getAngleBetween(float vectorX, float vectorY, float usedAngle)
 	{
 		return 0.0f;
 	}
+	if (dot < -vectorMagnitude + 0.001f) // this is mainly because acosf kinda freaks out when given exactly 1
+	{
+		return 180.0f * DEG_TO_RAD;
+	}
 	return acosf(dot / vectorMagnitude);
 }
 
@@ -194,7 +203,7 @@ void Kart::doCollisions()
 {
 	bool collisionThisIteration = false;
 
-	const int ITER_CAP = 2;
+	const int ITER_CAP = 3;
 	for (int iter = 0; iter <= ITER_CAP && (iter == 0 || collisionThisIteration); iter++)
 	{
 		// calculate points for the corners of the kart, before and after the expected movement
@@ -245,32 +254,29 @@ void Kart::doCollisions()
 		float yNormal;
 		float time = 2.0f;
 
-		for (int group = 0; group < wallGroupCount; group++)
+		for (int i = 0; i < race[currentCheckpoint]->getWallGroup().count; i++)
 		{
-			for (int i = 0; i < wallGroups[group].count; i++)
-			{
-				Wall* wall = wallGroups[group].walls[i];
+			Wall* wall = race[currentCheckpoint]->getWallGroup().walls[i];
 
-				if (getLineSegmentIntersection(beforeFLX, beforeFLY, afterFLX, afterFLY,
-					wall->getX1(), wall->getY1(), wall->getX2(), wall->getY2(), &xIntersect, &yIntersect, &xNormal, &yNormal, &time))
-				{
-					corner = Corner::FrontLeft;
-				}
-				if (getLineSegmentIntersection(beforeFRX, beforeFRY, afterFRX, afterFRY,
-					wall->getX1(), wall->getY1(), wall->getX2(), wall->getY2(), &xIntersect, &yIntersect, &xNormal, &yNormal, &time))
-				{
-					corner = Corner::FrontRight;
-				}
-				if (getLineSegmentIntersection(beforeBLX, beforeBLY, afterBLX, afterBLY,
-					wall->getX1(), wall->getY1(), wall->getX2(), wall->getY2(), &xIntersect, &yIntersect, &xNormal, &yNormal, &time))
-				{
-					corner = Corner::BackLeft;
-				}
-				if (getLineSegmentIntersection(beforeBRX, beforeBRY, afterBRX, afterBRY,
-					wall->getX1(), wall->getY1(), wall->getX2(), wall->getY2(), &xIntersect, &yIntersect, &xNormal, &yNormal, &time))
-				{
-					corner = Corner::BackRight;
-				}
+			if (getLineSegmentIntersection(beforeFLX, beforeFLY, afterFLX, afterFLY,
+				wall->getX1(), wall->getY1(), wall->getX2(), wall->getY2(), &xIntersect, &yIntersect, &xNormal, &yNormal, &time))
+			{
+				corner = Corner::FrontLeft;
+			}
+			if (getLineSegmentIntersection(beforeFRX, beforeFRY, afterFRX, afterFRY,
+				wall->getX1(), wall->getY1(), wall->getX2(), wall->getY2(), &xIntersect, &yIntersect, &xNormal, &yNormal, &time))
+			{
+				corner = Corner::FrontRight;
+			}
+			if (getLineSegmentIntersection(beforeBLX, beforeBLY, afterBLX, afterBLY,
+				wall->getX1(), wall->getY1(), wall->getX2(), wall->getY2(), &xIntersect, &yIntersect, &xNormal, &yNormal, &time))
+			{
+				corner = Corner::BackLeft;
+			}
+			if (getLineSegmentIntersection(beforeBRX, beforeBRY, afterBRX, afterBRY,
+				wall->getX1(), wall->getY1(), wall->getX2(), wall->getY2(), &xIntersect, &yIntersect, &xNormal, &yNormal, &time))
+			{
+				corner = Corner::BackRight;
 			}
 		}
 
@@ -281,7 +287,7 @@ void Kart::doCollisions()
 			kartSpin = 0.0f;
 			angularVelocity = 0.0f;
 
-			if (iter != ITER_CAP)
+			if (iter != ITER_CAP) // don't bother with any bounce on the last iter
 			{
 				const float angleBetween = getAngleBetween(xNormal, yNormal, angle) * RAD_TO_DEG;
 
@@ -300,25 +306,14 @@ void Kart::doCollisions()
 				xVelocity = (xVelocity - 2.0f * xNormal * dot) * reduction;
 				yVelocity = (yVelocity - 2.0f * yNormal * dot) * reduction;
 
-				// after reflection, calculate kart spin by using the angle of incidence
-				if (angleBetween <= 90.0f) // going forwards into the wall
+				if (iter < ITER_CAP - 1) // don't bother with spin on second last iter
 				{
-					float spin = (3.0f * KART_ELASTICITY + velocityMagnitude) * sqrtf(angleBetween * (90.0f - angleBetween)) * KART_SPIN_MULTIPLIER * KART_ELASTICITY;
+					// after reflection, calculate kart spin by using the angle of incidence
+					if (angleBetween <= 90.0f) // going backwards into the wall
+					{
+						float spin = (3.0f * KART_ELASTICITY + velocityMagnitude) * sqrtf(angleBetween * (90.0f - angleBetween)) * KART_SPIN_MULTIPLIER * KART_ELASTICITY;
 
-					if (corner == Corner::FrontLeft)
-					{
-						if (angleBetween > 40.0f) // greater than a 40 degree bounce, so spin outwards (should be 45, but giving some leeway)
-						{
-							kartSpin = spin;
-						}
-						else // less than a 40 degree bounce, so spin inwards
-						{
-							kartSpin = -spin;
-						}
-					}
-					else // by defininition only the front two wheels can get it when the angle is less than 90
-					{
-						if (angleBetween > 40.0f) // greater than a 40 degree bounce, so spin outwards (should be 45, but giving some leeway)
+						if ((corner == Corner::BackLeft) == (angleBetween > 40.0f))  // greater than a 40 degree bounce, so spin outwards (should be 45, but giving some leeway)
 						{
 							kartSpin = -spin;
 						}
@@ -327,25 +322,11 @@ void Kart::doCollisions()
 							kartSpin = spin;
 						}
 					}
-				}
-				else // backing into it
-				{
-					float spin = (3.0f * KART_ELASTICITY + velocityMagnitude) * sqrtf((angleBetween - 90.0f) * (180.0f - angleBetween)) * KART_SPIN_MULTIPLIER* KART_ELASTICITY;
+					else // going forward into it
+					{
+						float spin = (3.0f * KART_ELASTICITY + velocityMagnitude) * sqrtf((angleBetween - 90.0f) * (180.0f - angleBetween)) * KART_SPIN_MULTIPLIER * KART_ELASTICITY;
 
-					if (corner == Corner::BackLeft)
-					{
-						if (angleBetween > 140.0f) // less than a 40 degree bounce, so spin inwards (should be 45, but giving some leeway)
-						{
-							kartSpin = spin;
-						}
-						else // less than a 40 degree bounce, so spin outwards
-						{
-							kartSpin = -spin;
-						}
-					}
-					else
-					{
-						if (angleBetween > 140.0f) // less than a 40 degree bounce, so spin inwards (should be 45, but giving some leeway)
+						if ((corner == Corner::FrontLeft) == (angleBetween > 140.0f)) // less than a 40 degree bounce, so spin inwards (should be 45, but giving some leeway)
 						{
 							kartSpin = -spin;
 						}
@@ -365,6 +346,52 @@ void Kart::doCollisions()
 		else
 		{
 			collisionThisIteration = false;
+		}
+	}
+}
+
+void Kart::doCheckpoints(float xPositionBefore, float yPositionBefore)
+{
+	float xIntersect; // none of these are nessesary, but the function needs them
+	float yIntersect;
+	float xNormal;
+	float yNormal;
+	float time;
+
+	// attempt the checkpoint behind
+	int behindIndex = currentCheckpoint == 0 ? checkpointCount - 1 : currentCheckpoint - 1;
+	if (getLineSegmentIntersection(xPositionBefore, yPositionBefore, xPosition, yPosition,
+		race[behindIndex]->getX1(), race[behindIndex]->getY1(), race[behindIndex]->getX2(), race[behindIndex]->getY2(),
+		&xIntersect, &yIntersect, &xNormal, &yNormal, &time))
+	{
+		currentCheckpoint--;
+		if (currentCheckpoint == -1)
+		{
+			currentCheckpoint = checkpointCount - 1;
+		}
+	}
+
+	// attempt the checkpoint ahead
+	if (getLineSegmentIntersection(xPositionBefore, yPositionBefore, xPosition, yPosition,
+		race[currentCheckpoint]->getX1(), race[currentCheckpoint]->getY1(), race[currentCheckpoint]->getX2(), race[currentCheckpoint]->getY2(),
+		&xIntersect, &yIntersect, &xNormal, &yNormal, &time))
+	{
+		currentCheckpoint++;
+		if (currentCheckpoint == checkpointCount)
+		{
+			currentCheckpoint = 0;
+		}
+
+		// update the furthest checkpoint and lap
+		if (currentCheckpoint == 0 && furthestCheckpoint == checkpointCount - 1)
+		{
+			furthestCheckpoint = 0;
+			lapNumber++;
+			std::cout << "lap increase\n";
+		}
+		else if (furthestCheckpoint == currentCheckpoint - 1)
+		{
+			furthestCheckpoint++;
 		}
 	}
 }
@@ -393,15 +420,31 @@ bool Kart::getLineSegmentIntersection(float kx1, float ky1, float kx2, float ky2
 		*ox = kx1 + kFraction * lineKX;
 		*oy = ky1 + kFraction * lineKY;
 		float normalMagnitude = sqrtf(lineWX * lineWX + lineWY * lineWY);
-		if ((lineWX == 0.0f && kx1 < *ox) || (ky1 < (lineWY / lineWX) * (kx1 - wx1) + wy1))
+		if (((lineWX == 0.0f && kx1 > wx1) || (ky1 < (lineWY / lineWX) * (kx1 - wx1) + wy1)))
 		{
-			*onx = -lineWY / normalMagnitude; // x normal
-			*ony = lineWX / normalMagnitude; // y normal
+			if (lineWX >= 0.0f)
+			{
+				*onx = lineWY / normalMagnitude; // x normal
+				*ony = -lineWX / normalMagnitude; // y normal
+			}
+			else
+			{
+				*onx = -lineWY / normalMagnitude; // x normal
+				*ony = lineWX / normalMagnitude; // y normal
+			}
 		}
 		else
 		{
-			*onx = lineWY / normalMagnitude; // x normal
-			*ony = -lineWX / normalMagnitude; // y normal
+			if (lineWX >= 0.0f)
+			{
+				*onx = -lineWY / normalMagnitude; // x normal
+				*ony = lineWX / normalMagnitude; // y normal
+			}
+			else
+			{
+				*onx = lineWY / normalMagnitude; // x normal
+				*ony = -lineWX / normalMagnitude; // y normal
+			}
 		}
 
 		return true; // only return true if this is the first collision (kFraction < *otime)
