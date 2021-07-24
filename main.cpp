@@ -1,7 +1,17 @@
 #include "main.h"
 
+void print()
+{
+    std::cout << "aa\n";
+}
+
 int main()
 {
+    bool editMode = true;
+
+    sf::Font font;
+    font.loadFromFile("Assets/arial.ttf");
+
     sf::RenderWindow window(sf::VideoMode(1500, 1000), "Reinforcement Kart!");
     window.setFramerateLimit(60);
 
@@ -53,6 +63,10 @@ int main()
 
     Kart kart("Test", &input, sf::Color::Yellow, 550, 550, -40, race, 4);
 
+    Button button(&print, Transform(70, 70, -40, 70, 0.0f, 0.1f, 0.1f, 0.2f), window);
+
+    TextField tf(TextFieldType::Text, "Hello World.", "abc", 16, font, Transform(0, 0, 0, 24, 0.7f, 0.9f, 0.1f, 0.1f), window);
+
     while (window.isOpen())
     {
         sf::Event e;
@@ -62,6 +76,9 @@ int main()
             {
                 window.close();
             }
+
+            button.handleEvent(window, e);
+            tf.handleEvent(window, e);
         }
 
         kart.tick();
@@ -84,6 +101,8 @@ int main()
         wN.render(window);
         wO.render(window);
         kart.render(window);
+        button.render(window);
+        tf.render(window);
         window.display();
     }
 

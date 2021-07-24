@@ -6,3 +6,4 @@
 #include "kart.h"
 #include "wall.h"
 #include "checkpoint.h"
+#include "gui.h"

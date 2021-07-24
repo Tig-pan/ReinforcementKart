@@ -390,7 +390,6 @@ void Kart::doCheckpoints(float xPositionBefore, float yPositionBefore)
 		{
 			furthestCheckpoint = 0;
 			lapNumber++;
-			std::cout << "lap increase\n";
 		}
 		else if (furthestCheckpoint == currentCheckpoint - 1)
 		{
@@ -398,6 +397,7 @@ void Kart::doCheckpoints(float xPositionBefore, float yPositionBefore)
 		}
 	}
 
+	// calculate checkpoint progress
 	behindIndex = currentCheckpoint == 0 ? checkpointCount - 1 : currentCheckpoint - 1;
 
 	float behindDistance = distanceToLine(xPosition, yPosition, race[behindIndex]->getX1(), race[behindIndex]->getY1(), race[behindIndex]->getX2(), race[behindIndex]->getY2());
