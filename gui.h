@@ -3,6 +3,7 @@
 #include <SFML/Graphics.hpp>
 
 #include <string>
+#include <iostream>
 
 #include "constants.h"
 
@@ -85,12 +86,19 @@ enum class TextFieldType
 	FloatingNumeric
 };
 
+union TextFieldResult
+{
+	float floatResult;
+	int intResult;
+	char* textResult;
+};
+
 class TextField : public virtual GUI
 {
 public:
 	// A Text Field that extends GUI, takes keyboard input upon selection and allows for text or numbers to be entered
-	TextField(TextFieldType type, std::string labelText, std::string placeholderText, int fontSize, sf::Font& font, Transform transform, sf::RenderWindow& window);
-	TextField(TextFieldType type, std::string labelText, std::string placeholderText, int fontSize, sf::Font& font, Transform transform, sf::Color unselected, sf::Color highlighted, sf::Color selected, sf::Color outline, sf::RenderWindow& window);
+	TextField(TextFieldType type, void (*done)(TextFieldResult), std::string labelText, std::string placeholderText, int fontSize, sf::Font& font, Transform transform, sf::RenderWindow& window);
+	TextField(TextFieldType type, void (*done)(TextFieldResult), std::string labelText, std::string placeholderText, int fontSize, sf::Font& font, Transform transform, sf::Color unselected, sf::Color highlighted, sf::Color selected, sf::Color outline, sf::RenderWindow& window);
 
 	void resize(float screenWidth, float screenHeight) override;
 
@@ -98,7 +106,20 @@ public:
 
 	void render(sf::RenderWindow& window) override;
 protected:
+	// Returns true if the given character is an acceptable character at the current position in the text, false otherwise
+	bool acceptableCharacter(unsigned char keyCode);
+
+	// Returns true if the current textString contains the given character, false otherwise
+	bool stringContains(unsigned char keyCode);
+
+	// Updates the current visual cursor position
+	void updateCursorPosition();
+
+	// This is called when the text field is done being iteracted with, and it now calls the done function with the appropriate parameter
+	void finishText();
+
 	TextFieldType type;
+	void (*done)(TextFieldResult);
 
 	sf::RectangleShape rect;
 	sf::Text label;
@@ -112,4 +133,14 @@ protected:
 	sf::Color unselected;
 	sf::Color highlighted;
 	sf::Color selected;
+	sf::Color outline;
+
+	sf::Vertex cursor[2];
+
+	bool held;
+	bool over;
+	bool active;
+
+	int cursorPosition;
+	int cursorTimeFlash;
 };

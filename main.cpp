@@ -5,6 +5,11 @@ void print()
     std::cout << "aa\n";
 }
 
+void printTextField(TextFieldResult t)
+{
+    std::cout << t.floatResult << "\n";
+}
+
 int main()
 {
     bool editMode = true;
@@ -65,7 +70,7 @@ int main()
 
     Button button(&print, Transform(70, 70, -40, 70, 0.0f, 0.1f, 0.1f, 0.2f), window);
 
-    TextField tf(TextFieldType::Text, "Hello World.", "abc", 16, font, Transform(0, 0, 0, 24, 0.7f, 0.9f, 0.1f, 0.1f), window);
+    TextField tf(TextFieldType::FloatingNumeric, &printTextField, "Hello World.", "abc", 16, font, Transform(0, 0, 0, 24, 0.7f, 0.9f, 0.1f, 0.1f), window);
 
     while (window.isOpen())
     {
