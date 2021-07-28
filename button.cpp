@@ -1,6 +1,6 @@
 #include "gui.h"
 
-Button::Button(void (*clicked)(), Transform transform, sf::RenderWindow& window)
+Button::Button(std::function<void()> clicked, std::string labelText, int fontSize, sf::Font& font, Transform transform, sf::RenderWindow& window)
 	: GUI(transform)
 	, clicked(clicked)
 
@@ -9,6 +9,7 @@ Button::Button(void (*clicked)(), Transform transform, sf::RenderWindow& window)
 	, selected(RECT_SELECTED)
 
 	, rect()
+	, label(labelText, font, fontSize)
 
 	, held(false)
 	, over(false)
@@ -20,7 +21,7 @@ Button::Button(void (*clicked)(), Transform transform, sf::RenderWindow& window)
 	resize(window.getSize().x, window.getSize().y);
 }
 
-Button::Button(void (*clicked)(), Transform transform, sf::Color unselected, sf::Color highlighted, sf::Color selected, sf::Color outline, sf::RenderWindow& window)
+Button::Button(std::function<void()> clicked, std::string labelText, int fontSize, sf::Font& font, Transform transform, sf::Color unselected, sf::Color highlighted, sf::Color selected, sf::Color outline, sf::RenderWindow& window)
 	: GUI(transform)
 	, clicked(clicked)
 
@@ -28,7 +29,8 @@ Button::Button(void (*clicked)(), Transform transform, sf::Color unselected, sf:
 	, highlighted(highlighted)
 	, selected(selected)
 
-	, rect()
+	, rect(sf::Vector2f(0,0))
+	, label(labelText, font, fontSize)
 
 	, held(false)
 	, over(false)
@@ -49,6 +51,10 @@ void Button::resize(float screenWidth, float screenHeight)
 	rect.setPosition(
 		(transform.xMaxAnchor + transform.xMinAnchor) * 0.5f * screenWidth + (transform.left + transform.right) * 0.5f,
 		(transform.yMaxAnchor + transform.yMinAnchor) * 0.5f * screenHeight + (transform.top + transform.bottom) * 0.5f);
+
+	label.setPosition(
+		roundf((transform.xMaxAnchor + transform.xMinAnchor) * 0.5f * screenWidth + (transform.left + transform.right) * 0.5f - label.getLocalBounds().left - label.getLocalBounds().width * 0.5f),
+		roundf((transform.yMaxAnchor + transform.yMinAnchor) * 0.5f * screenHeight + (transform.top + transform.bottom) * 0.5f - label.getLocalBounds().top - label.getLocalBounds().height * 0.5f));
 }
 
 void Button::handleEvent(sf::RenderWindow& window, sf::Event& e)
@@ -71,6 +77,7 @@ void Button::handleEvent(sf::RenderWindow& window, sf::Event& e)
 	if (e.type == sf::Event::MouseButtonPressed && over)
 	{
 		held = true;
+
 		rect.setFillColor(selected);
 	}
 
@@ -78,12 +85,13 @@ void Button::handleEvent(sf::RenderWindow& window, sf::Event& e)
 	{
 		held = false;
 
-		clicked();
 		rect.setFillColor(highlighted);
+		clicked();
 	}
 }
 
 void Button::render(sf::RenderWindow& window)
 {
 	window.draw(rect);
+	window.draw(label);
 }

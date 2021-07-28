@@ -1,6 +1,6 @@
 #include "gui.h"
 
-TextField::TextField(TextFieldType type, void (*done)(TextFieldResult), std::string labelText, std::string placeholderText, int fontSize, sf::Font& font, Transform transform, sf::RenderWindow& window)
+TextField::TextField(TextFieldType type, std::function<void(TextFieldResult)> done, std::string labelText, std::string placeholderText, int fontSize, sf::Font& font, Transform transform, sf::RenderWindow& window)
 	: GUI(transform)
 
 	, type(type)
@@ -36,7 +36,7 @@ TextField::TextField(TextFieldType type, void (*done)(TextFieldResult), std::str
 	resize(window.getSize().x, window.getSize().y);
 }
 
-TextField::TextField(TextFieldType type, void (*done)(TextFieldResult), std::string labelText, std::string placeholderText, int fontSize, sf::Font& font, Transform transform, sf::Color unselected, sf::Color highlighted, sf::Color selected, sf::Color outline, sf::RenderWindow& window)
+TextField::TextField(TextFieldType type, std::function<void(TextFieldResult)> done, std::string labelText, std::string placeholderText, int fontSize, sf::Font& font, Transform transform, sf::Color unselected, sf::Color highlighted, sf::Color selected, sf::Color outline, sf::RenderWindow& window)
 	: GUI(transform)
 
 	, type(type)
@@ -82,11 +82,13 @@ void TextField::resize(float screenWidth, float screenHeight)
 		(transform.xMaxAnchor + transform.xMinAnchor) * 0.5f * screenWidth + (transform.left + transform.right) * 0.5f,
 		(transform.yMaxAnchor + transform.yMinAnchor) * 0.5f * screenHeight + (transform.top + transform.bottom) * 0.5f);
 
-	label.setPosition(transform.xMinAnchor * screenWidth + transform.left - label.getLocalBounds().left, 
-		transform.yMinAnchor * screenHeight + transform.top - fontSize - RECT_OUTLINE_THICKNESS - TEXT_PADDING);
+	label.setPosition(
+		roundf(transform.xMinAnchor * screenWidth + transform.left - label.getLocalBounds().left),
+		roundf(transform.yMinAnchor * screenHeight + transform.top - fontSize - RECT_OUTLINE_THICKNESS - TEXT_PADDING));
 
-	text.setPosition(transform.xMinAnchor * screenWidth + transform.left - label.getLocalBounds().left + TEXT_PADDING,
-		(transform.yMaxAnchor + transform.yMinAnchor) * 0.5f * screenHeight + (transform.top + transform.bottom) * 0.5f - text.getLocalBounds().top - text.getLocalBounds().height * 0.5f);
+	text.setPosition(
+		roundf(transform.xMinAnchor * screenWidth + transform.left - label.getLocalBounds().left + TEXT_PADDING),
+		roundf((transform.yMaxAnchor + transform.yMinAnchor) * 0.5f * screenHeight + (transform.top + transform.bottom) * 0.5f - text.getLocalBounds().top - text.getLocalBounds().height * 0.5f));
 
 	cursor[0].position.y = transform.yMinAnchor * screenHeight + transform.top + TEXT_PADDING / 2.0f;
 	cursor[1].position.y = transform.yMaxAnchor * screenHeight + transform.bottom - TEXT_PADDING / 2.0f;
@@ -128,7 +130,24 @@ void TextField::handleEvent(sf::RenderWindow& window, sf::Event& e)
 		text.setFillColor(sf::Color::White);
 		text.setString(textString);
 
-		cursorPosition = textString.size();
+		if (active)
+		{
+			// find closest cursor position to mouse
+			float closest = 9999.0f;
+			for (int i = 0; i < textString.size(); i++)
+			{
+				float distance = sf::Mouse::getPosition(window).x - text.findCharacterPos(i).x;
+				if (abs(distance) < abs(closest))
+				{
+					cursorPosition = i;
+					closest = distance;
+				}
+			}
+			if (cursorPosition == textString.size() - 1 && closest > text.getCharacterSize() / 2.0f) // too far off to the right
+			{
+				cursorPosition = textString.size();
+			}
+		}
 		updateCursorPosition();
 
 		held = false;

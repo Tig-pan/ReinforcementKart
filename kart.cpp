@@ -28,7 +28,7 @@ Kart::Kart(std::string racerName, Input* input, sf::Color kartColor, float start
 	, isDrifting(false)
 {
 	body.setFillColor(kartColor);
-	body.setOrigin(KART_LENGTH / 2.0f, KART_WIDTH / 2.0f); // position is now measured relative to the center of the back wheels
+	body.setOrigin(KART_LENGTH / 2.0f, KART_WIDTH / 2.0f); // position is now measured relative to the middle of the kart
 	wheel.setFillColor(WHEEL_COLOR);
 	wheel.setOrigin(KART_WHEEL_LENGTH / 2.0f, KART_WHEEL_WIDTH / 2.0f);
 }
@@ -142,6 +142,18 @@ void Kart::render(sf::RenderWindow& window)
 	window.draw(body);
 }
 
+void Kart::resetPosition(float newXPosition, float newYPosition, float newAngle)
+{
+	xPosition = newXPosition;
+	yPosition = newYPosition;
+	angle = newAngle;
+	wheelAngle = 0.0f;
+
+	xVelocity = 0.0f;
+	yVelocity = 0.0f;
+	kartSpin = 0.0f;
+}
+
 float Kart::getAngleBetween(float vectorX, float vectorY, float usedAngle)
 {
 	const float vectorMagnitude = sqrtf(vectorX * vectorX + vectorY * vectorY);
@@ -204,6 +216,11 @@ void Kart::doFriction()
 
 void Kart::doCollisions()
 {
+	if (race == nullptr)
+	{
+		return;
+	}
+
 	bool collisionThisIteration = false;
 
 	const int ITER_CAP = 3;
@@ -355,6 +372,11 @@ void Kart::doCollisions()
 
 void Kart::doCheckpoints(float xPositionBefore, float yPositionBefore)
 {
+	if (race == nullptr)
+	{
+		return;
+	}
+
 	float xIntersect; // none of these are nessesary, but the function needs them
 	float yIntersect;
 	float xNormal;

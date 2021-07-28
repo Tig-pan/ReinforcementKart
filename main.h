@@ -7,3 +7,4 @@
 #include "wall.h"
 #include "checkpoint.h"
 #include "gui.h"
+#include "editor.h"

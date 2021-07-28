@@ -4,9 +4,13 @@
 
 #include <string>
 #include <iostream>
+#include <functional>
 
 #include "constants.h"
 
+/*
+A method of determining screen dimensions. Uses variables for anchors along positions of the screen, and for fixed distances from those anchors.
+*/
 struct Transform
 {
 	Transform(float left, float right, float top, float bottom, float xMinAnchor, float xMaxAnchor, float yMinAnchor, float yMaxAnchor)
@@ -52,12 +56,55 @@ protected:
 	Transform transform;
 };
 
-class Button : public virtual GUI
+/*
+Different methods of aligning a Label within its Transform.
+*/
+enum class LabelAlign
+{
+	LeftTop,
+	LeftMiddle,
+	LeftBottom,
+	CenterTop,
+	CenterMiddle,
+	CenterBottom,
+	RightTop,
+	RightMiddle,
+	RightBottom
+};
+
+/*
+A Label class that inherits from GUI, is merely displays a string onto the screen.
+*/
+class Label : GUI
+{
+public:
+	// A Label that extends GUI, takes a string and values relating to the text and transform
+	Label(LabelAlign alignment, std::string labelText, int fontSize, sf::Font& font, Transform transform, sf::RenderWindow& window);
+
+	// Changes the labelText text to be the given string
+	void setText(std::string labelText, sf::RenderWindow& window);
+
+	void resize(float screenWidth, float screenHeight) override;
+
+	void handleEvent(sf::RenderWindow& window, sf::Event& e) override {} // no events to be handled with a label
+
+	void render(sf::RenderWindow& window) override;
+
+protected:
+	LabelAlign alignment;
+
+	sf::Text label;
+};
+
+/*
+A Button class that inherits from GUI, is represented by a rectangle that can be clicked. Calls a given function when clicked.
+*/
+class Button : GUI
 {
 public:
 	// A Button that extends GUI, taking all the GUI values and a function pointer to be called when the button is clicked
-	Button(void (*clicked)(), Transform transform, sf::RenderWindow& window);
-	Button(void (*clicked)(), Transform transform, sf::Color unselected, sf::Color highlighted, sf::Color selected, sf::Color outline, sf::RenderWindow& window);
+	Button(std::function<void()> clicked, std::string labelText, int fontSize, sf::Font& font, Transform transform, sf::RenderWindow& window);
+	Button(std::function<void()> clicked, std::string labelText, int fontSize, sf::Font& font, Transform transform, sf::Color unselected, sf::Color highlighted, sf::Color selected, sf::Color outline, sf::RenderWindow& window);
 
 	void resize(float screenWidth, float screenHeight) override;
 
@@ -66,9 +113,10 @@ public:
 	void render(sf::RenderWindow& window) override;
 
 protected:
-	void (*clicked)(); // a void returning function with no parameters to be called when the button is clicked
+	std::function<void()> clicked; // a void returning function with no parameters to be called when the button is clicked
 
 	sf::RectangleShape rect;
+	sf::Text label;
 
 	sf::Color unselected;
 	sf::Color highlighted;
@@ -78,6 +126,42 @@ protected:
 	bool over;
 };
 
+/*
+A Toggle class that inherits from GUI, is represented by a rectangle that can be clicked, when clicked it is toggled between 2 states. It also calls a function
+with the current state as a parameter.
+*/
+class Toggle : GUI
+{
+public:
+	// A Toggle that extends GUI, functions kind of like a button, but can be toggled between 2 states
+	Toggle(std::function<void(bool)> toggled, bool startState, LabelAlign alignment, std::string labelText, int fontSize, sf::Font& font, Transform transform, sf::RenderWindow& window);
+	Toggle(std::function<void(bool)> toggled, bool startState, LabelAlign alignment, std::string labelText, int fontSize, sf::Font& font, Transform transform, sf::Color unselected, sf::Color highlighted, sf::Color selected, sf::Color outline, sf::RenderWindow& window);
+
+	void resize(float screenWidth, float screenHeight) override;
+
+	void handleEvent(sf::RenderWindow& window, sf::Event& e) override;
+
+	void render(sf::RenderWindow& window) override;
+private:
+	std::function<void()> toggled;
+
+	sf::RectangleShape rect;
+	sf::Text label;
+
+	LabelAlign alignment;
+
+	sf::Color unselected;
+	sf::Color highlighted;
+	sf::Color selected;
+
+	bool held;
+	bool over;
+	bool active;
+};
+
+/*
+Different types of a TextField.
+*/
 enum class TextFieldType
 {
 	Text,
@@ -86,6 +170,9 @@ enum class TextFieldType
 	FloatingNumeric
 };
 
+/*
+A union representing the possible results of the TextField.
+*/
 union TextFieldResult
 {
 	float floatResult;
@@ -93,12 +180,16 @@ union TextFieldResult
 	char* textResult;
 };
 
-class TextField : public virtual GUI
+/*
+A TextField class that inherits from GUI, is represented by a rectangle that can be clicked and have text inputted into it from the keyboard. 
+Calls a function with the TextFieldResult when the input is done.
+*/
+class TextField : GUI
 {
 public:
 	// A Text Field that extends GUI, takes keyboard input upon selection and allows for text or numbers to be entered
-	TextField(TextFieldType type, void (*done)(TextFieldResult), std::string labelText, std::string placeholderText, int fontSize, sf::Font& font, Transform transform, sf::RenderWindow& window);
-	TextField(TextFieldType type, void (*done)(TextFieldResult), std::string labelText, std::string placeholderText, int fontSize, sf::Font& font, Transform transform, sf::Color unselected, sf::Color highlighted, sf::Color selected, sf::Color outline, sf::RenderWindow& window);
+	TextField(TextFieldType type, std::function<void(TextFieldResult)> done, std::string labelText, std::string placeholderText, int fontSize, sf::Font& font, Transform transform, sf::RenderWindow& window);
+	TextField(TextFieldType type, std::function<void(TextFieldResult)> done, std::string labelText, std::string placeholderText, int fontSize, sf::Font& font, Transform transform, sf::Color unselected, sf::Color highlighted, sf::Color selected, sf::Color outline, sf::RenderWindow& window);
 
 	void resize(float screenWidth, float screenHeight) override;
 
@@ -119,7 +210,7 @@ protected:
 	void finishText();
 
 	TextFieldType type;
-	void (*done)(TextFieldResult);
+	std::function<void(TextFieldResult)> done;
 
 	sf::RectangleShape rect;
 	sf::Text label;

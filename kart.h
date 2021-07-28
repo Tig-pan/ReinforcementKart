@@ -60,6 +60,15 @@ public:
 	*/
 	void render(sf::RenderWindow& window);
 
+	// Returns the x position of the kart
+	float getX() { return xPosition; }
+
+	// Returns the y position of the kart
+	float getY() { return yPosition; }
+
+	// Resets the position and angle of the kart to the given values, also sets velocities to 0
+	void resetPosition(float newXPosition, float newYPosition, float newAngle);
+
 private:
 	const sf::Color WHEEL_COLOR = sf::Color(100, 100, 100, 255);
 	const sf::Color DRIFTING_WHEEL_COLOR = sf::Color(170, 170, 170, 255); // this is kind of a temporary solution to indicate drifting, ideally it would be shown with skidmarks or something
