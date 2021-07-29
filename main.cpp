@@ -17,7 +17,7 @@ int main()
     sf::Font font;
     font.loadFromFile("Assets/arial.ttf");
 
-    sf::RenderWindow window(sf::VideoMode(1500, 1000), "Reinforcement Kart!");
+    sf::RenderWindow window(sf::VideoMode(1200, 800), "Reinforcement Kart!");
     window.setFramerateLimit(60);
 
     if (editMode)

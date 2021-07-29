@@ -126,16 +126,42 @@ protected:
 	bool over;
 };
 
+class Toggle; // forward declaration so ToggleGroup can access it
+
+/*
+A ToggleGroup is a class that manages multiple toggles. And allows then to pick between multiple options, instead of merely turning a single value off and on.
+*/
+class ToggleGroup
+{
+public:
+	// A ToggleGroup that controls multiple toggles. Must be created with a capacity, then have the toggles assigned after instantiation.
+	ToggleGroup(int capacity);
+	~ToggleGroup();
+
+	// Assigns a specific toggle to a place in the internal toggle array.
+	void setToggle(int index, Toggle* toggle);
+
+	// Deactivates all other Toggles in the ToggleGroup other than the given one.
+	void deactivateOtherToggles(Toggle* enabledToggle);
+private:
+	Toggle** toggleArray;
+	int capacity;
+};
+
+
 /*
 A Toggle class that inherits from GUI, is represented by a rectangle that can be clicked, when clicked it is toggled between 2 states. It also calls a function
-with the current state as a parameter.
+with the current state as a parameter. Can also be included in a ToggleGroup.
 */
 class Toggle : GUI
 {
 public:
 	// A Toggle that extends GUI, functions kind of like a button, but can be toggled between 2 states
-	Toggle(std::function<void(bool)> toggled, bool startState, LabelAlign alignment, std::string labelText, int fontSize, sf::Font& font, Transform transform, sf::RenderWindow& window);
-	Toggle(std::function<void(bool)> toggled, bool startState, LabelAlign alignment, std::string labelText, int fontSize, sf::Font& font, Transform transform, sf::Color unselected, sf::Color highlighted, sf::Color selected, sf::Color outline, sf::RenderWindow& window);
+	Toggle(std::function<void(bool)> toggled, ToggleGroup* group, bool startState, LabelAlign alignment, std::string labelText, int fontSize, sf::Font& font, Transform transform, sf::RenderWindow& window);
+	Toggle(std::function<void(bool)> toggled, ToggleGroup* group, bool startState, LabelAlign alignment, std::string labelText, int fontSize, sf::Font& font, Transform transform, sf::Color unselected, sf::Color highlighted, sf::Color selected, sf::Color outline, sf::RenderWindow& window);
+
+	// A function typically called by the toggle group to deactivate this toggle remotely and without calling the toggled function
+	void deactivate();
 
 	void resize(float screenWidth, float screenHeight) override;
 
@@ -143,10 +169,12 @@ public:
 
 	void render(sf::RenderWindow& window) override;
 private:
-	std::function<void()> toggled;
+	std::function<void(bool)> toggled;
+	ToggleGroup* group;
 
 	sf::RectangleShape rect;
 	sf::Text label;
+	sf::Vertex mark[4];
 
 	LabelAlign alignment;
 

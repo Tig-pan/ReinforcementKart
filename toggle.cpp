@@ -1,7 +1,36 @@
 #include "gui.h"
 
-Toggle::Toggle(std::function<void(bool)> toggled, bool startState, LabelAlign alignment, std::string labelText, int fontSize, sf::Font& font, Transform transform, sf::RenderWindow& window)
+ToggleGroup::ToggleGroup(int capacity)
+	: capacity(capacity)
+{
+	toggleArray = new Toggle*[capacity];
+}
+
+ToggleGroup::~ToggleGroup()
+{
+	delete[] toggleArray;
+}
+
+void ToggleGroup::setToggle(int index, Toggle* toggle)
+{
+	toggleArray[index] = toggle;
+}
+
+void ToggleGroup::deactivateOtherToggles(Toggle* enabledToggle)
+{
+	for (int i = 0; i < capacity; i++)
+	{
+		if (toggleArray[i] != enabledToggle)
+		{
+			toggleArray[i]->deactivate();
+		}
+	}
+}
+
+Toggle::Toggle(std::function<void(bool)> toggled, ToggleGroup* group, bool startState, LabelAlign alignment, std::string labelText, int fontSize, sf::Font& font, Transform transform, sf::RenderWindow& window)
 	: GUI(transform)
+	, toggled(toggled)
+	, group(group)
 
 	, alignment(alignment)
 
@@ -23,8 +52,10 @@ Toggle::Toggle(std::function<void(bool)> toggled, bool startState, LabelAlign al
 	resize(window.getSize().x, window.getSize().y);
 }
 
-Toggle::Toggle(std::function<void(bool)> toggled, bool startState, LabelAlign alignment, std::string labelText, int fontSize, sf::Font& font, Transform transform, sf::Color unselected, sf::Color highlighted, sf::Color selected, sf::Color outline, sf::RenderWindow& window)
+Toggle::Toggle(std::function<void(bool)> toggled, ToggleGroup* group, bool startState, LabelAlign alignment, std::string labelText, int fontSize, sf::Font& font, Transform transform, sf::Color unselected, sf::Color highlighted, sf::Color selected, sf::Color outline, sf::RenderWindow& window)
 	: GUI(transform)
+	, toggled(toggled)
+	, group(group)
 
 	, alignment(alignment)
 
@@ -43,7 +74,17 @@ Toggle::Toggle(std::function<void(bool)> toggled, bool startState, LabelAlign al
 	rect.setOutlineColor(outline);
 	rect.setFillColor(unselected);
 
+	mark[0].color = sf::Color::White;
+	mark[1].color = sf::Color::White;
+	mark[2].color = sf::Color::White;
+	mark[3].color = sf::Color::White;
+
 	resize(window.getSize().x, window.getSize().y);
+}
+
+void Toggle::deactivate()
+{
+	active = false;
 }
 
 void Toggle::resize(float screenWidth, float screenHeight)
@@ -96,6 +137,22 @@ void Toggle::resize(float screenWidth, float screenHeight)
 	}
 
 	label.setPosition(pos);
+
+	mark[0].position = sf::Vector2f(
+		transform.xMinAnchor * screenWidth + transform.left,
+		transform.yMinAnchor * screenHeight + transform.top);
+
+	mark[1].position = sf::Vector2f(
+		transform.xMaxAnchor * screenWidth + transform.right,
+		transform.yMaxAnchor * screenHeight + transform.bottom);
+
+	mark[2].position = sf::Vector2f(
+		transform.xMaxAnchor * screenWidth + transform.right,
+		transform.yMinAnchor * screenHeight + transform.top);
+
+	mark[3].position = sf::Vector2f(
+		transform.xMinAnchor * screenWidth + transform.left,
+		transform.yMaxAnchor * screenHeight + transform.bottom);
 }
 
 void Toggle::handleEvent(sf::RenderWindow& window, sf::Event& e)
@@ -127,7 +184,20 @@ void Toggle::handleEvent(sf::RenderWindow& window, sf::Event& e)
 		held = false;
 
 		rect.setFillColor(highlighted);
-		active = !active;
+		if (group == nullptr)
+		{
+			active = !active;
+			toggled(active);
+		}
+		else // has a ToggleGroup
+		{
+			if (!active)
+			{
+				active = true;
+				group->deactivateOtherToggles(this);
+				toggled(active);
+			}
+		}
 	}
 }
 
@@ -135,4 +205,8 @@ void Toggle::render(sf::RenderWindow& window)
 {
 	window.draw(rect);
 	window.draw(label);
+	if (active)
+	{
+		window.draw(mark, 4, sf::PrimitiveType::Lines);
+	}
 }
