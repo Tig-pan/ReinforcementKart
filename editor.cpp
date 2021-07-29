@@ -54,6 +54,8 @@ void Editor::run()
                 newMapButton->handleEvent(window, e);
                 break;
             case EditorState::Editting:
+                handleSelectionEvent(e);
+
                 resetPositionButton->handleEvent(window, e);
                 useKartToggle->handleEvent(window, e);
 
@@ -73,16 +75,9 @@ void Editor::run()
             {
                 editorKart->tick();
                 editorKart->update();
-                edittingView = sf::View(sf::FloatRect(
-                    editorKart->getX() - window.getSize().x * 0.5f,
-                    editorKart->getY() - window.getSize().y * 0.5f,
-                    window.getSize().x,
-                    window.getSize().y));
 
-                int camX = int(roundf(editorKart->getX()));
-                int camY = int(roundf(editorKart->getY()));
-                kartPositionLabel->setText("Camera:  X: " + std::to_string(camX) + "   Y: " + std::to_string(camY), window);
-                mousePositionLabel->setText("Mouse:  X: " + std::to_string(camX + sf::Mouse::getPosition(window).x - int(window.getSize().x) / 2) + "   Y: " + std::to_string(camY + sf::Mouse::getPosition(window).y - int(window.getSize().y) / 2), window);
+                xCamera = editorKart->getX();
+                yCamera = editorKart->getY();
             }
             else
             {
@@ -102,17 +97,16 @@ void Editor::run()
                 {
                     yCamera -= CAMERA_SPEED;
                 }
-                edittingView = sf::View(sf::FloatRect(
-                    xCamera - window.getSize().x * 0.5f,
-                    yCamera - window.getSize().y * 0.5f,
-                    window.getSize().x,
-                    window.getSize().y));
-
-                int camX = int(roundf(xCamera));
-                int camY = int(roundf(yCamera));
-                kartPositionLabel->setText("Camera:  X: " + std::to_string(camX) + "   Y: " + std::to_string(camY), window);
-                mousePositionLabel->setText("Mouse:  X: " + std::to_string(camX + sf::Mouse::getPosition(window).x - int(window.getSize().x) / 2) + "   Y: " + std::to_string(camY + sf::Mouse::getPosition(window).y - int(window.getSize().y) / 2), window);
             }
+
+            edittingView = sf::View(sf::FloatRect(
+                xCamera - window.getSize().x * 0.5f,
+                yCamera - window.getSize().y * 0.5f,
+                window.getSize().x,
+                window.getSize().y));
+
+            kartPositionLabel->setText("Camera:  X: " + std::to_string(int(roundf(xCamera))) + "   Y: " + std::to_string(int(roundf(yCamera))), window);
+            mousePositionLabel->setText("Mouse:  X: " + std::to_string(getRelativeMouseX()) + "   Y: " + std::to_string(getRelativeMouseY()), window);
             break;
         }
 
@@ -136,15 +130,46 @@ void Editor::run()
             quitButton->render(window);
 
             window.setView(edittingView);
+
             window.draw(*timeTrialStart);
             if (currentlyUsingKart)
             {
                 editorKart->render(window);
             }
+            renderSelection();
             break;
         }
 
         window.display();
+    }
+}
+
+void Editor::handleSelectionEvent(sf::Event& e)
+{
+    if (e.type == sf::Event::MouseButtonPressed && e.mouseButton.button == sf::Mouse::Right)
+    {
+        selectionHeld = true;
+        selectionStart = sf::Vector2f(getRelativeMouseX(), getRelativeMouseY());
+    }
+    else if (e.type == sf::Event::MouseButtonReleased && e.mouseButton.button == sf::Mouse::Right)
+    {
+        selectionHeld = false;
+        // TODO: Add whatever is being added
+    }
+}
+
+void Editor::renderSelection()
+{
+    if (selectionHeld)
+    {
+        sf::Vertex selectionLines[2];
+        selectionLines[0].color = sf::Color(255, 170, 170, 255); // slightly red
+        selectionLines[1].color = sf::Color(170, 170, 255, 255); // slightly blue
+        
+        selectionLines[0].position = selectionStart;
+        selectionLines[1].position = sf::Vector2f(getRelativeMouseX(), getRelativeMouseY());
+
+        window.draw(selectionLines, 2, sf::PrimitiveType::Lines);
     }
 }
 
@@ -179,12 +204,14 @@ void Editor::openEditting()
     quitButton = new Button([this]() { clickQuitButton(); }, "Quit", 16, font, Transform(-50, -5, 5, 30, 1.0f, 1.0f, 0.0f, 0.0f), window);
 
     currentEditSelection = new ToggleGroup(2);
-    editWallToggle = new Toggle([this](bool active) { (toggleEditWallToggle(active)); }, currentEditSelection, true, LabelAlign::RightMiddle, "Walls", 16, font, Transform(5, 30, 100, 125, 0.0f, 0.0f, 0.0f, 0.0f), window);
-    editCheckpointToggle = new Toggle([this](bool active) { (toggleEditCheckpointToggle(active)); }, currentEditSelection, false, LabelAlign::RightMiddle, "Checkpoints", 16, font, Transform(5, 30, 135, 160, 0.0f, 0.0f, 0.0f, 0.0f), window);
+    editWallToggle = new Toggle([this](bool active) { toggleEditWallToggle(active); }, currentEditSelection, true, LabelAlign::RightMiddle, "Walls", 16, font, Transform(5, 30, 100, 125, 0.0f, 0.0f, 0.0f, 0.0f), window);
+    editCheckpointToggle = new Toggle([this](bool active) { toggleEditCheckpointToggle(active); }, currentEditSelection, false, LabelAlign::RightMiddle, "Checkpoints", 16, font, Transform(5, 30, 135, 160, 0.0f, 0.0f, 0.0f, 0.0f), window);
     currentEditSelection->setToggle(0, editWallToggle);
     currentEditSelection->setToggle(1, editCheckpointToggle);
 
     currentlyUsingKart = true;
+    selectionType = EditSelection::Wall;
+    selectionHeld = false;
 }
 
 void Editor::setStartAngle(float newStartAngle)
@@ -229,14 +256,14 @@ void Editor::toggleUseKartToggle(bool active)
     }
 }
 
-void Editor::toggleEditWallToggle(bool active)
+void Editor::toggleEditWallToggle(bool active) // active will never be false because its part of a group
 {
-    // TODO
+    selectionType = EditSelection::Wall;
 }
 
-void Editor::toggleEditCheckpointToggle(bool active)
+void Editor::toggleEditCheckpointToggle(bool active) // active will never be false because its part of a group
 {
-    // TODO
+    selectionType = EditSelection::Checkpoint;
 }
 
 void Editor::clickSaveButton()
@@ -247,5 +274,25 @@ void Editor::clickSaveButton()
 void Editor::clickQuitButton()
 {
     // TODO
+}
+
+int Editor::getRelativeMouseX()
+{
+    float returnable = xCamera + sf::Mouse::getPosition(window).x - float(window.getSize().x) / 2.0f;
+    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LControl) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::RControl))
+    {
+        returnable = roundf(returnable / 50.0f) * 50.0f;
+    }
+    return roundf(returnable);
+}
+
+int Editor::getRelativeMouseY()
+{
+    float returnable = yCamera + sf::Mouse::getPosition(window).y - float(window.getSize().y) / 2.0f;
+    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LControl) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::RControl))
+    {
+        returnable = roundf(returnable / 50.0f) * 50.0f;
+    }
+    return roundf(returnable);
 }
 

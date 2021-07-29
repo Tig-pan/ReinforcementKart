@@ -23,6 +23,15 @@ enum class EditorState
 };
 
 /*
+The current selection of objects to edit.
+*/
+enum class EditSelection
+{
+	Wall,
+	Checkpoint
+};
+
+/*
 A class that emcompasses the entirety of the map editor. Allows you to save, load, and edit maps.
 */
 class Editor
@@ -34,6 +43,11 @@ public:
 	void run();
 
 private:
+	// Handles events related to selections
+	void handleSelectionEvent(sf::Event& e);
+	// Renders everything to do with selections
+	void renderSelection();
+
 	// Creates all the GUI elements for the MainMenu state
 	void openMainMenu();
 	// Removes all the GUI elements for the MainMenu state
@@ -64,6 +78,11 @@ private:
 
 	// When the quitButton is clicked: confirm the quit, then go change the state to the main menu
 	void clickQuitButton();
+
+	// Returns the x position of the mouse relative to the current camera
+	int getRelativeMouseX();
+	// Returns the y position of the mouse relative to the current camera
+	int getRelativeMouseY();
 
 	sf::RenderWindow& window;
 	sf::Font& font;
@@ -96,6 +115,10 @@ private:
 	bool currentlyUsingKart;
 	float xCamera;
 	float yCamera;
+
+	EditSelection selectionType;
+	sf::Vector2f selectionStart;
+	bool selectionHeld;
 
 	// Map Data
 	float startAngle;

@@ -74,14 +74,14 @@ void Button::handleEvent(sf::RenderWindow& window, sf::Event& e)
 		}
 	}
 
-	if (e.type == sf::Event::MouseButtonPressed && over)
+	if (e.type == sf::Event::MouseButtonPressed && e.mouseButton.button == sf::Mouse::Left && over)
 	{
 		held = true;
 
 		rect.setFillColor(selected);
 	}
 
-	if (e.type == sf::Event::MouseButtonReleased && held)
+	if (e.type == sf::Event::MouseButtonReleased && e.mouseButton.button == sf::Mouse::Left && held)
 	{
 		held = false;
 

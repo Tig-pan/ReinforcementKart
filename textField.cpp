@@ -111,13 +111,13 @@ void TextField::handleEvent(sf::RenderWindow& window, sf::Event& e)
 		}
 	}
 
-	if (e.type == sf::Event::MouseButtonPressed && over)
+	if (e.type == sf::Event::MouseButtonPressed && e.mouseButton.button == sf::Mouse::Left && over)
 	{
 		held = true;
 		rect.setFillColor(selected);
 	}
 
-	if (e.type == sf::Event::MouseButtonReleased)
+	if (e.type == sf::Event::MouseButtonReleased && e.mouseButton.button == sf::Mouse::Left)
 	{
 		if (active && !held) // was active, and is now not going to be
 		{
