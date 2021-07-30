@@ -108,8 +108,6 @@ private:
 	void doCheckpoints(float xPositionBefore, float yPositionBefore);
 	// Returns true if the lines intersect, also updates the output x and output y variables with the intersection point
 	bool getLineSegmentIntersection(float kx1, float ky1, float kx2, float ky2, float wx1, float wy1, float wx2, float wy2, float* ox, float* oy, float* onx, float* ony, float* otime);
-	// Returns the distance to the closest place on the line to point
-	float distanceToLine(float px, float py, float wx1, float wy1, float wx2, float wy2);
 
 	sf::RectangleShape body;
 	sf::RectangleShape wheel;

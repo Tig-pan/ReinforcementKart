@@ -12,6 +12,10 @@
 #include "kart.h"
 
 #define CAMERA_SPEED 10.0f
+#define DEFAULT_WALL_THICKNESS 2.0f
+#define SELECTED_WALL_THICKNESS 4.0f
+
+#define MIN_SELECTION_DISTANCE 10.0f
 
 /*
 All the possible states the editor can be in, ex. MainMenu, Editting, etc.
@@ -37,6 +41,10 @@ A class that emcompasses the entirety of the map editor. Allows you to save, loa
 class Editor
 {
 public:
+	/* A constuctor for Editor, allows for the creationand editing of maps, takes no parameters other than a font, and the render window to use.
+	 
+	window: the sf::RenderWindow& window to render the editor onto
+	font: the sf::Font to use for all GUI text*/
 	Editor(sf::RenderWindow& window, sf::Font& font);
 
 	// Runs indefinatly until the editor is closed, or the window is closed
@@ -47,6 +55,9 @@ private:
 	void handleSelectionEvent(sf::Event& e);
 	// Renders everything to do with selections
 	void renderSelection();
+
+	// Sets the appropriate values after selecting a new Wall
+	void updateSelectedWall(Wall* newSelection);
 
 	// Creates all the GUI elements for the MainMenu state
 	void openMainMenu();
@@ -112,6 +123,15 @@ private:
 	Button* saveButton;
 	Button* quitButton;
 
+	Label* startColorLabel;
+	TextField* startColorR;
+	TextField* startColorG;
+	TextField* startColorB;
+	Label* endColorLabel;
+	TextField* endColorR;
+	TextField* endColorG;
+	TextField* endColorB;
+
 	bool currentlyUsingKart;
 	float xCamera;
 	float yCamera;
@@ -119,6 +139,10 @@ private:
 	EditSelection selectionType;
 	sf::Vector2f selectionStart;
 	bool selectionHeld;
+
+	Wall* currentlySelectedWall;
+	sf::Color startColor;
+	sf::Color endColor;
 
 	// Map Data
 	float startAngle;

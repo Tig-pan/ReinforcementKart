@@ -15,8 +15,6 @@ void Editor::run()
 {
     while (window.isOpen())
     {
-        window.setView(guiView);
-
         sf::Event e;
         while (window.pollEvent(e))
         {
@@ -43,6 +41,15 @@ void Editor::run()
 
                     saveButton->resize(e.size.width, e.size.height);
                     quitButton->resize(e.size.width, e.size.height);
+
+                    startColorLabel->resize(e.size.width, e.size.height);
+                    startColorR->resize(e.size.width, e.size.height);
+                    startColorG->resize(e.size.width, e.size.height);
+                    startColorB->resize(e.size.width, e.size.height);
+                    endColorLabel->resize(e.size.width, e.size.height);
+                    endColorR->resize(e.size.width, e.size.height);
+                    endColorG->resize(e.size.width, e.size.height);
+                    endColorB->resize(e.size.width, e.size.height);
                     break;
                 }
                 window.setView(guiView);
@@ -54,16 +61,28 @@ void Editor::run()
                 newMapButton->handleEvent(window, e);
                 break;
             case EditorState::Editting:
-                handleSelectionEvent(e);
+                bool clickedOnGuiElement = false;
+                clickedOnGuiElement |= resetPositionButton->handleEvent(window, e);
+                clickedOnGuiElement |= useKartToggle->handleEvent(window, e);
 
-                resetPositionButton->handleEvent(window, e);
-                useKartToggle->handleEvent(window, e);
+                clickedOnGuiElement |= editWallToggle->handleEvent(window, e);
+                clickedOnGuiElement |= editCheckpointToggle->handleEvent(window, e);
 
-                editWallToggle->handleEvent(window, e);
-                editCheckpointToggle->handleEvent(window, e);
+                clickedOnGuiElement |= saveButton->handleEvent(window, e);
+                clickedOnGuiElement |= quitButton->handleEvent(window, e);
 
-                saveButton->handleEvent(window, e);
-                quitButton->handleEvent(window, e);
+                clickedOnGuiElement |= startColorR->handleEvent(window, e);
+                clickedOnGuiElement |= startColorG->handleEvent(window, e);
+                clickedOnGuiElement |= startColorB->handleEvent(window, e);
+                clickedOnGuiElement |= endColorR->handleEvent(window, e);
+                clickedOnGuiElement |= endColorG->handleEvent(window, e);
+                clickedOnGuiElement |= endColorB->handleEvent(window, e);
+
+                if (!clickedOnGuiElement)
+                {
+                    // only do selection event if no gui element has been clicked on, avoids selecting things while just trying to click a input field
+                    handleSelectionEvent(e);
+                }
                 break;
             }
         }
@@ -118,6 +137,20 @@ void Editor::run()
             newMapButton->render(window);
             break;
         case EditorState::Editting:
+            // Render the actual world stuff first
+            window.setView(edittingView);
+
+            renderSelection();
+
+            window.draw(*timeTrialStart);
+            if (currentlyUsingKart)
+            {
+                editorKart->render(window);
+            }
+
+            // Render the gui stuff on top
+            window.setView(guiView);
+
             resetPositionButton->render(window);
             kartPositionLabel->render(window);
             useKartToggle->render(window);
@@ -129,14 +162,14 @@ void Editor::run()
             saveButton->render(window);
             quitButton->render(window);
 
-            window.setView(edittingView);
-
-            window.draw(*timeTrialStart);
-            if (currentlyUsingKart)
-            {
-                editorKart->render(window);
-            }
-            renderSelection();
+            startColorLabel->render(window);
+            startColorR->render(window);
+            startColorG->render(window);
+            startColorB->render(window);
+            endColorLabel->render(window);
+            endColorR->render(window);
+            endColorG->render(window);
+            endColorB->render(window);
             break;
         }
 
@@ -146,7 +179,28 @@ void Editor::run()
 
 void Editor::handleSelectionEvent(sf::Event& e)
 {
-    if (e.type == sf::Event::MouseButtonPressed && e.mouseButton.button == sf::Mouse::Right)
+    if (e.type == sf::Event::MouseButtonPressed && e.mouseButton.button == sf::Mouse::Left)
+    {
+        if (selectionType == EditSelection::Wall)
+        {
+            // if the cursor is within MIN_SELECTION_DISTANCE to a wall, change the current selection to it
+            Wall* closest = nullptr;
+            float closestDistance = MIN_SELECTION_DISTANCE;
+
+            for (auto it = mapWalls.begin(); it != mapWalls.end(); it++)
+            {
+                float dist = Wall::distanceToLine(getRelativeMouseX(), getRelativeMouseY(), (*it).getX1(), (*it).getY1(), (*it).getX2(), (*it).getY2());
+                if (dist < closestDistance)
+                {
+                    closest = &*it;
+                    closestDistance = dist;
+                }
+            }
+
+            updateSelectedWall(closest);
+        }
+    }
+    else if (e.type == sf::Event::MouseButtonPressed && e.mouseButton.button == sf::Mouse::Right)
     {
         selectionHeld = true;
         selectionStart = sf::Vector2f(getRelativeMouseX(), getRelativeMouseY());
@@ -154,7 +208,8 @@ void Editor::handleSelectionEvent(sf::Event& e)
     else if (e.type == sf::Event::MouseButtonReleased && e.mouseButton.button == sf::Mouse::Right)
     {
         selectionHeld = false;
-        // TODO: Add whatever is being added
+        mapWalls.push_back(Wall(selectionStart.x, selectionStart.y, getRelativeMouseX(), getRelativeMouseY(), DEFAULT_WALL_THICKNESS, startColor, endColor));
+        updateSelectedWall(&*(--mapWalls.end()));
     }
 }
 
@@ -163,13 +218,41 @@ void Editor::renderSelection()
     if (selectionHeld)
     {
         sf::Vertex selectionLines[2];
-        selectionLines[0].color = sf::Color(255, 170, 170, 255); // slightly red
-        selectionLines[1].color = sf::Color(170, 170, 255, 255); // slightly blue
+
+        selectionLines[0].color = startColor;
+        selectionLines[1].color = endColor;
         
         selectionLines[0].position = selectionStart;
         selectionLines[1].position = sf::Vector2f(getRelativeMouseX(), getRelativeMouseY());
 
         window.draw(selectionLines, 2, sf::PrimitiveType::Lines);
+    }
+
+    for (auto it = mapWalls.begin(); it != mapWalls.end(); it++)
+    {
+        (*it).render(window);
+    }
+}
+
+void Editor::updateSelectedWall(Wall* newSelection)
+{
+    if (currentlySelectedWall != nullptr)
+    {
+        currentlySelectedWall->setThickness(DEFAULT_WALL_THICKNESS);
+    }
+
+    currentlySelectedWall = newSelection;
+    if (currentlySelectedWall != nullptr)
+    {
+        currentlySelectedWall->setThickness(SELECTED_WALL_THICKNESS);
+
+        startColorR->setNewPlaceholder(std::to_string(currentlySelectedWall->getColor1().r));
+        startColorG->setNewPlaceholder(std::to_string(currentlySelectedWall->getColor1().g));
+        startColorB->setNewPlaceholder(std::to_string(currentlySelectedWall->getColor1().b));
+
+        endColorR->setNewPlaceholder(std::to_string(currentlySelectedWall->getColor2().r));
+        endColorG->setNewPlaceholder(std::to_string(currentlySelectedWall->getColor2().g));
+        endColorB->setNewPlaceholder(std::to_string(currentlySelectedWall->getColor2().b));
     }
 }
 
@@ -185,6 +268,14 @@ void Editor::closeMainMenu()
 
 void Editor::openEditting()
 {
+    currentlySelectedWall = nullptr;
+    currentlyUsingKart = true;
+    selectionType = EditSelection::Wall;
+    selectionHeld = false;
+
+    startColor = sf::Color(255, 170, 170, 255); // slightly red
+    endColor = sf::Color(170, 170, 255, 255); // slightly blue
+
     timeTrialStart = new sf::RectangleShape(sf::Vector2f(KART_LENGTH, KART_WIDTH));
     timeTrialStart->setFillColor(sf::Color::Transparent);
     timeTrialStart->setOutlineColor(sf::Color::White);
@@ -195,23 +286,59 @@ void Editor::openEditting()
     editorKeyboardInput = new KeyboardInput();
     editorKart = new Kart("Edit Mode", editorKeyboardInput, sf::Color::Yellow, 0, 0, startAngle, nullptr, 0);
 
-    resetPositionButton = new Button([this]() { clickResetPositionButton(); }, "Reset Position", 16, font, Transform(5, 125, 5, 30, 0.0f, 0.0f, 0.0f, 0.0f), window);
-    kartPositionLabel = new Label(LabelAlign::LeftMiddle, "", 16, font, Transform(135, 135, 5, 30, 0.0f, 0.0f, 0.0f, 0.0f), window);
-    useKartToggle = new Toggle([this](bool active) { toggleUseKartToggle(active); }, nullptr, true, LabelAlign::LeftMiddle, "Kart Camera", 16, font, Transform(100, 125, 40, 65, 0.0f, 0.0f, 0.0f, 0.0f), window);
-    mousePositionLabel = new Label(LabelAlign::LeftMiddle, "", 16, font, Transform(135, 135, 40, 65, 0.0f, 0.0f, 0.0f, 0.0f), window);
+    resetPositionButton = new Button([this]() { clickResetPositionButton(); }, "Reset Position", 16, font, 
+        Transform(5, 125, 5, 30, 0.0f, 0.0f, 0.0f, 0.0f), window);
+    kartPositionLabel = new Label(LabelAlign::LeftMiddle, "", 16, font, 
+        Transform(135, 135, 5, 30, 0.0f, 0.0f, 0.0f, 0.0f), window);
+    useKartToggle = new Toggle([this](bool active) { toggleUseKartToggle(active); }, nullptr, true, LabelAlign::LeftMiddle, "Kart Camera", 16, font, 
+        Transform(100, 125, 40, 65, 0.0f, 0.0f, 0.0f, 0.0f), window);
+    mousePositionLabel = new Label(LabelAlign::LeftMiddle, "", 16, font, 
+        Transform(135, 135, 40, 65, 0.0f, 0.0f, 0.0f, 0.0f), window);
 
-    saveButton = new Button([this]() { clickSaveButton(); }, "Save", 16, font, Transform(-105, -60, 5, 30, 1.0f, 1.0f, 0.0f, 0.0f), window);
-    quitButton = new Button([this]() { clickQuitButton(); }, "Quit", 16, font, Transform(-50, -5, 5, 30, 1.0f, 1.0f, 0.0f, 0.0f), window);
+    saveButton = new Button([this]() { clickSaveButton(); }, "Save", 16, font, 
+        Transform(-105, -60, 5, 30, 1.0f, 1.0f, 0.0f, 0.0f), window);
+    quitButton = new Button([this]() { clickQuitButton(); }, "Quit", 16, font, 
+        Transform(-50, -5, 5, 30, 1.0f, 1.0f, 0.0f, 0.0f), window);
 
     currentEditSelection = new ToggleGroup(2);
-    editWallToggle = new Toggle([this](bool active) { toggleEditWallToggle(active); }, currentEditSelection, true, LabelAlign::RightMiddle, "Walls", 16, font, Transform(5, 30, 100, 125, 0.0f, 0.0f, 0.0f, 0.0f), window);
-    editCheckpointToggle = new Toggle([this](bool active) { toggleEditCheckpointToggle(active); }, currentEditSelection, false, LabelAlign::RightMiddle, "Checkpoints", 16, font, Transform(5, 30, 135, 160, 0.0f, 0.0f, 0.0f, 0.0f), window);
+    editWallToggle = new Toggle([this](bool active) { toggleEditWallToggle(active); }, currentEditSelection, true, LabelAlign::RightMiddle, "Walls", 16, font, 
+        Transform(5, 30, 100, 125, 0.0f, 0.0f, 0.0f, 0.0f), window);
+    editCheckpointToggle = new Toggle([this](bool active) { toggleEditCheckpointToggle(active); }, currentEditSelection, false, LabelAlign::RightMiddle, "Checkpoints", 16, font, 
+        Transform(5, 30, 135, 160, 0.0f, 0.0f, 0.0f, 0.0f), window);
     currentEditSelection->setToggle(0, editWallToggle);
     currentEditSelection->setToggle(1, editCheckpointToggle);
 
-    currentlyUsingKart = true;
-    selectionType = EditSelection::Wall;
-    selectionHeld = false;
+    startColorLabel = new Label(LabelAlign::CenterBottom, "Start Color", 16, font,
+        Transform(-355, -205, -60, -60, 1.0f, 1.0f, 1.0f, 1.0f), window);
+
+    startColorR = new TextField(TextFieldType::UnsignedByte,
+        [this](TextFieldResult result) { startColor.r = result.intResult; if (currentlySelectedWall != nullptr) { currentlySelectedWall->setColor1(startColor); } },
+        "Red", std::to_string(startColor.r), 16, font,
+        Transform(-355, -310, -30, -3, 1.0f, 1.0f, 1.0f, 1.0f), window);
+    startColorG = new TextField(TextFieldType::UnsignedByte,
+        [this](TextFieldResult result) { startColor.g = result.intResult; if (currentlySelectedWall != nullptr) { currentlySelectedWall->setColor1(startColor); } },
+        "Green", std::to_string(startColor.g), 16, font,
+        Transform(-300, -255, -30, -3, 1.0f, 1.0f, 1.0f, 1.0f), window);
+    startColorB = new TextField(TextFieldType::UnsignedByte,
+        [this](TextFieldResult result) { startColor.b = result.intResult; if (currentlySelectedWall != nullptr) { currentlySelectedWall->setColor1(startColor); } },
+        "Blue", std::to_string(startColor.b), 16, font,
+        Transform(-245, -205, -30, -3, 1.0f, 1.0f, 1.0f, 1.0f), window);
+
+    endColorLabel = new Label(LabelAlign::CenterBottom, "End Color", 16, font,
+        Transform(-155, -5, -60, -60, 1.0f, 1.0f, 1.0f, 1.0f), window);
+
+    endColorR = new TextField(TextFieldType::UnsignedByte,
+        [this](TextFieldResult result) { endColor.r = result.intResult; if (currentlySelectedWall != nullptr) { currentlySelectedWall->setColor2(endColor); } },
+        "Red", std::to_string(endColor.r), 16, font,
+        Transform(-155, -110, -30, -3, 1.0f, 1.0f, 1.0f, 1.0f), window);
+    endColorG = new TextField(TextFieldType::UnsignedByte,
+        [this](TextFieldResult result) { endColor.g = result.intResult; if (currentlySelectedWall != nullptr) { currentlySelectedWall->setColor2(endColor); } },
+        "Green", std::to_string(endColor.g), 16, font,
+        Transform(-100, -55, -30, -3, 1.0f, 1.0f, 1.0f, 1.0f), window);
+    endColorB = new TextField(TextFieldType::UnsignedByte,
+        [this](TextFieldResult result) { endColor.b = result.intResult; if (currentlySelectedWall != nullptr) { currentlySelectedWall->setColor2(endColor); } },
+        "Blue", std::to_string(endColor.b), 16, font,
+        Transform(-45, -5, -30, -3, 1.0f, 1.0f, 1.0f, 1.0f), window);
 }
 
 void Editor::setStartAngle(float newStartAngle)

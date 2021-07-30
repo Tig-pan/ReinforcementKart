@@ -422,8 +422,8 @@ void Kart::doCheckpoints(float xPositionBefore, float yPositionBefore)
 	// calculate checkpoint progress
 	behindIndex = currentCheckpoint == 0 ? checkpointCount - 1 : currentCheckpoint - 1;
 
-	float behindDistance = distanceToLine(xPosition, yPosition, race[behindIndex]->getX1(), race[behindIndex]->getY1(), race[behindIndex]->getX2(), race[behindIndex]->getY2());
-	float forwardDistance = distanceToLine(xPosition, yPosition, race[currentCheckpoint]->getX1(), race[currentCheckpoint]->getY1(), race[currentCheckpoint]->getX2(), race[currentCheckpoint]->getY2());
+	float behindDistance = Wall::distanceToLine(xPosition, yPosition, race[behindIndex]->getX1(), race[behindIndex]->getY1(), race[behindIndex]->getX2(), race[behindIndex]->getY2());
+	float forwardDistance = Wall::distanceToLine(xPosition, yPosition, race[currentCheckpoint]->getX1(), race[currentCheckpoint]->getY1(), race[currentCheckpoint]->getX2(), race[currentCheckpoint]->getY2());
 	checkpointProgress = behindDistance / (behindDistance + forwardDistance);
 }
 
@@ -482,27 +482,4 @@ bool Kart::getLineSegmentIntersection(float kx1, float ky1, float kx2, float ky2
 	}
 
 	return false;
-}
-
-float Kart::distanceToLine(float px, float py, float wx1, float wy1, float wx2, float wy2)
-{
-	float lineWX = wx1 - wx2;
-	float lineWY = wy1 - wy2;
-
-	float distance = lineWX * lineWX + lineWY * lineWY;
-	float dot = (px - wx2) * lineWX + (py - wy2) * lineWY;
-	float ratio = dot / distance;
-	if (ratio < 0.0f)
-	{
-		ratio = 0.0f;
-	}
-	else if (ratio > 1.0f)
-	{
-		ratio = 1.0f;
-	}
-
-	float closestX = wx2 + lineWX * ratio;
-	float closestY = wy2 + lineWY * ratio;
-
-	return sqrtf((px - closestX) * (px - closestX) + (py - closestY) * (py - closestY));
 }

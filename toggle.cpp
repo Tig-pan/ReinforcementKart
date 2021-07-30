@@ -155,7 +155,7 @@ void Toggle::resize(float screenWidth, float screenHeight)
 		transform.yMaxAnchor * screenHeight + transform.bottom);
 }
 
-void Toggle::handleEvent(sf::RenderWindow& window, sf::Event& e)
+bool Toggle::handleEvent(sf::RenderWindow& window, sf::Event& e)
 {
 	if (e.type == sf::Event::MouseMoved)
 	{
@@ -177,6 +177,7 @@ void Toggle::handleEvent(sf::RenderWindow& window, sf::Event& e)
 		held = true;
 
 		rect.setFillColor(selected);
+		return true;
 	}
 
 	if (e.type == sf::Event::MouseButtonReleased && e.mouseButton.button == sf::Mouse::Left && held)
@@ -199,6 +200,7 @@ void Toggle::handleEvent(sf::RenderWindow& window, sf::Event& e)
 			}
 		}
 	}
+	return false;
 }
 
 void Toggle::render(sf::RenderWindow& window)

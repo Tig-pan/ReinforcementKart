@@ -60,7 +60,7 @@ TextField::TextField(TextFieldType type, std::function<void(TextFieldResult)> do
 	, active(false)
 	, cursorTimeFlash(0)
 {
-	text.setFillColor(sf::Color(170, 170, 170, 255)); // placeholder color
+	text.setFillColor(PLACEHOLDER_COLOR);
 
 	rect.setOutlineThickness(RECT_OUTLINE_THICKNESS);
 	rect.setOutlineColor(outline);
@@ -70,6 +70,15 @@ TextField::TextField(TextFieldType type, std::function<void(TextFieldResult)> do
 	cursor[1].color = sf::Color::White;
 
 	resize(window.getSize().x, window.getSize().y);
+}
+
+void TextField::setNewPlaceholder(std::string newPlaceholder)
+{
+	text.setString(newPlaceholder);
+	text.setFillColor(PLACEHOLDER_COLOR);
+
+	textString = "";
+	active = false;
 }
 
 void TextField::resize(float screenWidth, float screenHeight)
@@ -94,7 +103,7 @@ void TextField::resize(float screenWidth, float screenHeight)
 	cursor[1].position.y = transform.yMaxAnchor * screenHeight + transform.bottom - TEXT_PADDING / 2.0f;
 }
 
-void TextField::handleEvent(sf::RenderWindow& window, sf::Event& e)
+bool TextField::handleEvent(sf::RenderWindow& window, sf::Event& e)
 {
 	if (e.type == sf::Event::MouseMoved)
 	{
@@ -111,41 +120,53 @@ void TextField::handleEvent(sf::RenderWindow& window, sf::Event& e)
 		}
 	}
 
-	if (e.type == sf::Event::MouseButtonPressed && e.mouseButton.button == sf::Mouse::Left && over)
+	if (e.type == sf::Event::MouseButtonPressed && e.mouseButton.button == sf::Mouse::Left)
 	{
-		held = true;
-		rect.setFillColor(selected);
+		if (over)
+		{
+			held = true;
+			rect.setFillColor(selected);
+			return true;
+		}
+		else if (active)
+		{
+			finishText();
+		}
 	}
 
 	if (e.type == sf::Event::MouseButtonReleased && e.mouseButton.button == sf::Mouse::Left)
 	{
-		if (active && !held) // was active, and is now not going to be
-		{
-			finishText();
-		}
-
 		active = held;
 
-		rect.setOutlineColor(active ? sf::Color::Yellow : outline);
-		text.setFillColor(sf::Color::White);
-		text.setString(textString);
-
-		if (active)
+		if (active) // was active, and is now not going to be
 		{
-			// find closest cursor position to mouse
-			float closest = 9999.0f;
-			for (int i = 0; i < textString.size(); i++)
+			if (!held)
 			{
-				float distance = sf::Mouse::getPosition(window).x - text.findCharacterPos(i).x;
-				if (abs(distance) < abs(closest))
-				{
-					cursorPosition = i;
-					closest = distance;
-				}
+				finishText();
 			}
-			if (cursorPosition == textString.size() - 1 && closest > text.getCharacterSize() / 2.0f) // too far off to the right
+			else
 			{
-				cursorPosition = textString.size();
+				rect.setOutlineColor(sf::Color::Yellow);
+				text.setFillColor(sf::Color::White);
+				text.setString(textString);
+
+				// find closest cursor position to mouse
+				float closest = 9999.0f;
+				cursorPosition = 0; // in the case that theres no characters, this is nessesary
+				for (int i = 0; i < textString.size(); i++)
+				{
+					float distance = sf::Mouse::getPosition(window).x - text.findCharacterPos(i).x;
+
+					if (abs(distance) < abs(closest))
+					{
+						cursorPosition = i;
+						closest = distance;
+					}
+				}
+				if (cursorPosition == textString.size() - 1 && closest > text.getCharacterSize() / 2.0f) // too far off to the right
+				{
+					cursorPosition = textString.size();
+				}
 			}
 		}
 		updateCursorPosition();
@@ -188,11 +209,6 @@ void TextField::handleEvent(sf::RenderWindow& window, sf::Event& e)
 
 		if (keyCode == '\r')
 		{
-			active = false;
-
-			rect.setOutlineColor(outline);
-			rect.setFillColor(over ? highlighted : unselected);
-
 			finishText();
 		}
 		else if (keyCode == '\b')
@@ -213,6 +229,7 @@ void TextField::handleEvent(sf::RenderWindow& window, sf::Event& e)
 			updateCursorPosition();
 		}
 	}
+	return false;
 }
 
 void TextField::render(sf::RenderWindow& window)
@@ -220,10 +237,13 @@ void TextField::render(sf::RenderWindow& window)
 	window.draw(rect);
 	window.draw(label);
 	window.draw(text);
-	cursorTimeFlash = (cursorTimeFlash + 1) % (TEXT_CURSOR_FLASH_TIME * 2);
-	if (cursorTimeFlash <= TEXT_CURSOR_FLASH_TIME)
+	if (active)
 	{
-		window.draw(cursor, 2, sf::PrimitiveType::Lines);
+		cursorTimeFlash = (cursorTimeFlash + 1) % (TEXT_CURSOR_FLASH_TIME * 2);
+		if (cursorTimeFlash <= TEXT_CURSOR_FLASH_TIME)
+		{
+			window.draw(cursor, 2, sf::PrimitiveType::Lines);
+		}
 	}
 }
 
@@ -237,6 +257,8 @@ bool TextField::acceptableCharacter(unsigned char keyCode)
 		return (keyCode >= '0' && keyCode <= '9') || (keyCode >= 'A' && keyCode <= 'Z') || (keyCode >= 'a' && keyCode <= 'z');
 	case TextFieldType::IntegerNumeric:
 		return (cursorPosition == 0 && keyCode == '-' && (textString.size() == 0 || textString[0] != '-')) || (keyCode >= '0' && keyCode <= '9');
+	case TextFieldType::UnsignedByte:
+		return (keyCode >= '0' && keyCode <= '9');
 	case TextFieldType::FloatingNumeric:
 		return (keyCode == '.' && !stringContains('.')) || (cursorPosition == 0 && keyCode == '-' && (textString.size() == 0 || textString[0] != '-')) || (keyCode >= '0' && keyCode <= '9');
 	}
@@ -262,6 +284,10 @@ void TextField::updateCursorPosition()
 
 void TextField::finishText()
 {
+	active = false;
+	rect.setFillColor(over ? highlighted : unselected);
+	rect.setOutlineColor(outline);
+
 	TextFieldResult param;
 	switch (type)
 	{
@@ -280,7 +306,23 @@ void TextField::finishText()
 			textString = "0";
 			text.setString(textString);
 		}
-		param.floatResult = std::stoi(textString);
+		param.intResult = std::stoi(textString);
+		break;
+	case TextFieldType::UnsignedByte:
+		if (textString.size() == 0)
+		{
+			textString = "0";
+			text.setString(textString);
+		}
+		param.intResult = std::stoi(textString);
+		if (param.intResult < 0)
+		{
+			param.intResult = 0;
+		}
+		else if (param.intResult > 255)
+		{
+			param.intResult = 255;
+		}
 		break;
 	case TextFieldType::FloatingNumeric:
 		if (textString.size() == 0)

@@ -13,6 +13,16 @@ A method of determining screen dimensions. Uses variables for anchors along posi
 */
 struct Transform
 {
+	/*A constuctor for the Transform, it is used to define a GUI elements position and scale.
+	
+	left: a float, representing how many units left the bounding box should stretch left
+	right: a float, representing how many units left the bounding box should stretch right
+	top: a float, representing how many units left the bounding box should stretch up
+	bottom: a float, representing how many units left the bounding box should stretch down
+	xMinAnchor: what percentage along the screen the left side of the bounding box should start
+	xMaxAnchor: what percentage along the screen the right side of the bounding box should start
+	yMinAnchor: what percentage along the screen the top side of the bounding box should start
+	yMaxAnchor: what percentage along the screen the bottom side of the bounding box should start*/
 	Transform(float left, float right, float top, float bottom, float xMinAnchor, float xMaxAnchor, float yMinAnchor, float yMaxAnchor)
 		: left(left), right(right), top(top), bottom(bottom)
 		, xMinAnchor(xMinAnchor), xMaxAnchor(xMaxAnchor), yMinAnchor(yMinAnchor), yMaxAnchor(yMaxAnchor)
@@ -35,7 +45,9 @@ An abstract class used by all GUI elements. Contains values for positioning, sca
 class GUI abstract
 {
 public:
-	// The constructor for the GUI class that takes numerous values all defining the position and scale of the GUI element
+	/*The constructor for the GUI class that takes numerous values all defining the positionand scale of the GUI element
+	 
+	transform: the Transform of the GUI element, used to define position and scale*/
 	GUI(Transform transform)
 		: transform(transform)
 	{}
@@ -43,8 +55,8 @@ public:
 	// Resizes and moves the GUI element based on the new screen dimensions
 	virtual void resize(float screenWidth, float screenHeight) = 0;
 
-	// Updates the GUI element based on this frames events
-	virtual void handleEvent(sf::RenderWindow& window, sf::Event& e) = 0;
+	// Updates the GUI element based on this frames events, returns true if the mouse is clicked (initial LMB press) on the GUI element
+	virtual bool handleEvent(sf::RenderWindow& window, sf::Event& e) = 0;
 
 	// Renders the GUI element onto the render window
 	virtual void render(sf::RenderWindow& window) = 0;
@@ -78,7 +90,14 @@ A Label class that inherits from GUI, is merely displays a string onto the scree
 class Label : GUI
 {
 public:
-	// A Label that extends GUI, takes a string and values relating to the text and transform
+	/* A Label that extends GUI, takes a stringand values relating to the textand transform
+	
+	alignment: a LabelAlign enum, defines where the text should start in relation to the Transform
+	labelText: a string, the text to be displayed
+	fontSize: an integer, the size of the font to be displayed
+	font: a reference to a sf::Font, the font used
+	transform: the Transform of the GUI element
+	window: a reference to a sf::RenderWindow, used to calculate the size/position of the object*/
 	Label(LabelAlign alignment, std::string labelText, int fontSize, sf::Font& font, Transform transform, sf::RenderWindow& window);
 
 	// Changes the labelText text to be the given string
@@ -86,7 +105,7 @@ public:
 
 	void resize(float screenWidth, float screenHeight) override;
 
-	void handleEvent(sf::RenderWindow& window, sf::Event& e) override {} // no events to be handled with a label
+	bool handleEvent(sf::RenderWindow& window, sf::Event& e) override { return false; } // no events to be handled with a label
 
 	void render(sf::RenderWindow& window) override;
 
@@ -102,13 +121,20 @@ A Button class that inherits from GUI, is represented by a rectangle that can be
 class Button : GUI
 {
 public:
-	// A Button that extends GUI, taking all the GUI values and a function pointer to be called when the button is clicked
+	/* A constructor for Button that extends GUI, taking all the GUI values and a function pointer to be called when the button is clicked
+
+	clicked: a void function, this is called when the button is clicked
+	labelText: a string, the text to be displayed on the button
+	fontSize: an integer, the size of the font to be displayed
+	font: a reference to a sf::Font, the font used
+	transform: the Transform of the GUI element
+	window: a reference to a sf::RenderWindow, used to calculate the size/position of the object*/
 	Button(std::function<void()> clicked, std::string labelText, int fontSize, sf::Font& font, Transform transform, sf::RenderWindow& window);
 	Button(std::function<void()> clicked, std::string labelText, int fontSize, sf::Font& font, Transform transform, sf::Color unselected, sf::Color highlighted, sf::Color selected, sf::Color outline, sf::RenderWindow& window);
 
 	void resize(float screenWidth, float screenHeight) override;
 
-	void handleEvent(sf::RenderWindow& window, sf::Event& e) override;
+	bool handleEvent(sf::RenderWindow& window, sf::Event& e) override;
 
 	void render(sf::RenderWindow& window) override;
 
@@ -134,7 +160,9 @@ A ToggleGroup is a class that manages multiple toggles. And allows then to pick 
 class ToggleGroup
 {
 public:
-	// A ToggleGroup that controls multiple toggles. Must be created with a capacity, then have the toggles assigned after instantiation.
+	/* A constructor for ToggleGroup that controls multiple toggles.Must be created with a capacity, then have the toggles assigned after instantiation.
+	
+	capacity: the integer amount of Toggles in the toggle group*/
 	ToggleGroup(int capacity);
 	~ToggleGroup();
 
@@ -156,7 +184,17 @@ with the current state as a parameter. Can also be included in a ToggleGroup.
 class Toggle : GUI
 {
 public:
-	// A Toggle that extends GUI, functions kind of like a button, but can be toggled between 2 states
+	/* A constructor for Toggle that extends GUI, functions kind of like a button, but can be toggled between 2 states
+
+	toggled: a void function with a bool parameter, this is called when the toggle is clicked with the current state of the toggle
+	group: a ToggleGroup pointer, the toggle group to which this toggle belongs (set to `nullptr` if no ToggleGroup)
+	startState: a boolean defining wether to start active or inactive
+	alignment: a LabelAlign enum, defines where the label for the Toggle should start in relation to the Transform
+	labelText: a string, the text to be displayed next to the Toggle
+	fontSize: an integer, the size of the font to be displayed
+	font: a reference to a sf::Font, the font used
+	transform: the Transform of the GUI element
+	window: a reference to a sf::RenderWindow, used to calculate the size/position of the object*/
 	Toggle(std::function<void(bool)> toggled, ToggleGroup* group, bool startState, LabelAlign alignment, std::string labelText, int fontSize, sf::Font& font, Transform transform, sf::RenderWindow& window);
 	Toggle(std::function<void(bool)> toggled, ToggleGroup* group, bool startState, LabelAlign alignment, std::string labelText, int fontSize, sf::Font& font, Transform transform, sf::Color unselected, sf::Color highlighted, sf::Color selected, sf::Color outline, sf::RenderWindow& window);
 
@@ -165,7 +203,7 @@ public:
 
 	void resize(float screenWidth, float screenHeight) override;
 
-	void handleEvent(sf::RenderWindow& window, sf::Event& e) override;
+	bool handleEvent(sf::RenderWindow& window, sf::Event& e) override;
 
 	void render(sf::RenderWindow& window) override;
 private:
@@ -195,6 +233,7 @@ enum class TextFieldType
 	Text,
 	AlphaNumeric, // no decimals are allowed, this basically just means no special characters
 	IntegerNumeric,
+	UnsignedByte, // 0-255 integer
 	FloatingNumeric
 };
 
@@ -215,16 +254,30 @@ Calls a function with the TextFieldResult when the input is done.
 class TextField : GUI
 {
 public:
-	// A Text Field that extends GUI, takes keyboard input upon selection and allows for text or numbers to be entered
+	/* A constructor for TextField that extends GUI, takes keyboard input upon selection and allows for text or numbers to be entered
+
+	type: a TextFieldType enum, defines what kind of input to accept into the text field, and what kind of output to produce
+	done: a void function with a TextFieldResult parameter, this is called when the TextField is finished with the result of the text converted into the TextFieldResult field
+	labelText: a string, the text to be displayed next to the TextField
+	placeholderText: a string, the default text to be presented on the TextField before any input has begun
+	fontSize: an integer, the size of the font to be displayed
+	font: a reference to a sf::Font, the font used
+	transform: the Transform of the GUI element
+	window: a reference to a sf::RenderWindow, used to calculate the size/position of the object*/
 	TextField(TextFieldType type, std::function<void(TextFieldResult)> done, std::string labelText, std::string placeholderText, int fontSize, sf::Font& font, Transform transform, sf::RenderWindow& window);
 	TextField(TextFieldType type, std::function<void(TextFieldResult)> done, std::string labelText, std::string placeholderText, int fontSize, sf::Font& font, Transform transform, sf::Color unselected, sf::Color highlighted, sf::Color selected, sf::Color outline, sf::RenderWindow& window);
 
+	// Replaces the current text with a new placeholder text, also resets the current textString
+	void setNewPlaceholder(std::string newPlaceholder);
+
 	void resize(float screenWidth, float screenHeight) override;
 
-	void handleEvent(sf::RenderWindow& window, sf::Event& e) override;
+	bool handleEvent(sf::RenderWindow& window, sf::Event& e) override;
 
 	void render(sf::RenderWindow& window) override;
 protected:
+	const sf::Color PLACEHOLDER_COLOR = sf::Color(170, 170, 170, 255);
+
 	// Returns true if the given character is an acceptable character at the current position in the text, false otherwise
 	bool acceptableCharacter(unsigned char keyCode);
 

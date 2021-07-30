@@ -57,7 +57,7 @@ void Button::resize(float screenWidth, float screenHeight)
 		roundf((transform.yMaxAnchor + transform.yMinAnchor) * 0.5f * screenHeight + (transform.top + transform.bottom) * 0.5f - label.getLocalBounds().top - label.getLocalBounds().height * 0.5f));
 }
 
-void Button::handleEvent(sf::RenderWindow& window, sf::Event& e)
+bool Button::handleEvent(sf::RenderWindow& window, sf::Event& e)
 {
 	if (e.type == sf::Event::MouseMoved)
 	{
@@ -79,6 +79,7 @@ void Button::handleEvent(sf::RenderWindow& window, sf::Event& e)
 		held = true;
 
 		rect.setFillColor(selected);
+		return true;
 	}
 
 	if (e.type == sf::Event::MouseButtonReleased && e.mouseButton.button == sf::Mouse::Left && held)
@@ -88,6 +89,7 @@ void Button::handleEvent(sf::RenderWindow& window, sf::Event& e)
 		rect.setFillColor(highlighted);
 		clicked();
 	}
+	return false;
 }
 
 void Button::render(sf::RenderWindow& window)
