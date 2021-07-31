@@ -42,6 +42,15 @@ void Editor::run()
                     saveButton->resize(e.size.width, e.size.height);
                     quitButton->resize(e.size.width, e.size.height);
 
+                    startPositionLabel->resize(e.size.width, e.size.height);
+                    startXInput->resize(e.size.width, e.size.height);
+                    startYInput->resize(e.size.width, e.size.height);
+                    endPositionLabel->resize(e.size.width, e.size.height);
+                    endXInput->resize(e.size.width, e.size.height);
+                    endYInput->resize(e.size.width, e.size.height);
+
+                    deleteWallButton->resize(e.size.width, e.size.height);
+
                     startColorLabel->resize(e.size.width, e.size.height);
                     startColorR->resize(e.size.width, e.size.height);
                     startColorG->resize(e.size.width, e.size.height);
@@ -71,12 +80,25 @@ void Editor::run()
                 clickedOnGuiElement |= saveButton->handleEvent(window, e);
                 clickedOnGuiElement |= quitButton->handleEvent(window, e);
 
-                clickedOnGuiElement |= startColorR->handleEvent(window, e);
-                clickedOnGuiElement |= startColorG->handleEvent(window, e);
-                clickedOnGuiElement |= startColorB->handleEvent(window, e);
-                clickedOnGuiElement |= endColorR->handleEvent(window, e);
-                clickedOnGuiElement |= endColorG->handleEvent(window, e);
-                clickedOnGuiElement |= endColorB->handleEvent(window, e);
+                if (currentlySelectedWall != nullptr)
+                {
+                    clickedOnGuiElement |= startXInput->handleEvent(window, e);
+                    clickedOnGuiElement |= startYInput->handleEvent(window, e);
+                    clickedOnGuiElement |= endXInput->handleEvent(window, e);
+                    clickedOnGuiElement |= endYInput->handleEvent(window, e);
+
+                    clickedOnGuiElement |= deleteWallButton->handleEvent(window, e);
+                }
+
+                if (selectionType == EditSelection::Wall)
+                {
+                    clickedOnGuiElement |= startColorR->handleEvent(window, e);
+                    clickedOnGuiElement |= startColorG->handleEvent(window, e);
+                    clickedOnGuiElement |= startColorB->handleEvent(window, e);
+                    clickedOnGuiElement |= endColorR->handleEvent(window, e);
+                    clickedOnGuiElement |= endColorG->handleEvent(window, e);
+                    clickedOnGuiElement |= endColorB->handleEvent(window, e);
+                }
 
                 if (!clickedOnGuiElement)
                 {
@@ -125,7 +147,8 @@ void Editor::run()
                 window.getSize().y));
 
             kartPositionLabel->setText("Camera:  X: " + std::to_string(int(roundf(xCamera))) + "   Y: " + std::to_string(int(roundf(yCamera))), window);
-            mousePositionLabel->setText("Mouse:  X: " + std::to_string(getRelativeMouseX()) + "   Y: " + std::to_string(getRelativeMouseY()), window);
+            sf::Vector2i mouse = getRelativeMouse();
+            mousePositionLabel->setText("Mouse:  X: " + std::to_string(mouse.x) + "   Y: " + std::to_string(mouse.y), window);
             break;
         }
 
@@ -162,14 +185,29 @@ void Editor::run()
             saveButton->render(window);
             quitButton->render(window);
 
-            startColorLabel->render(window);
-            startColorR->render(window);
-            startColorG->render(window);
-            startColorB->render(window);
-            endColorLabel->render(window);
-            endColorR->render(window);
-            endColorG->render(window);
-            endColorB->render(window);
+            if (currentlySelectedWall != nullptr)
+            {
+                startPositionLabel->render(window);
+                startXInput->render(window);
+                startYInput->render(window);
+                endPositionLabel->render(window);
+                endXInput->render(window);
+                endYInput->render(window);
+
+                deleteWallButton->render(window);
+            }
+
+            if (selectionType == EditSelection::Wall)
+            {
+                startColorLabel->render(window);
+                startColorR->render(window);
+                startColorG->render(window);
+                startColorB->render(window);
+                endColorLabel->render(window);
+                endColorR->render(window);
+                endColorG->render(window);
+                endColorB->render(window);
+            }
             break;
         }
 
@@ -179,9 +217,16 @@ void Editor::run()
 
 void Editor::handleSelectionEvent(sf::Event& e)
 {
-    if (e.type == sf::Event::MouseButtonPressed && e.mouseButton.button == sf::Mouse::Left)
+    if (e.type == sf::Event::MouseButtonPressed && e.mouseButton.button == sf::Mouse::Right)
     {
-        if (selectionType == EditSelection::Wall)
+        selectionHeld = true;
+        sf::Vector2i mouse = getRelativeMouse();
+        selectionStart = sf::Vector2f(mouse.x, mouse.y);
+    }
+
+    if (selectionType == EditSelection::Wall)
+    {
+        if (e.type == sf::Event::MouseButtonPressed && e.mouseButton.button == sf::Mouse::Left)
         {
             // if the cursor is within MIN_SELECTION_DISTANCE to a wall, change the current selection to it
             Wall* closest = nullptr;
@@ -189,7 +234,8 @@ void Editor::handleSelectionEvent(sf::Event& e)
 
             for (auto it = mapWalls.begin(); it != mapWalls.end(); it++)
             {
-                float dist = Wall::distanceToLine(getRelativeMouseX(), getRelativeMouseY(), (*it).getX1(), (*it).getY1(), (*it).getX2(), (*it).getY2());
+                sf::Vector2i mouse = getRelativeMouse();
+                float dist = Wall::distanceToLine(mouse.x, mouse.y, (*it).getX1(), (*it).getY1(), (*it).getX2(), (*it).getY2());
                 if (dist < closestDistance)
                 {
                     closest = &*it;
@@ -197,19 +243,46 @@ void Editor::handleSelectionEvent(sf::Event& e)
                 }
             }
 
-            updateSelectedWall(closest);
+            updateSelectedWall(getMouseWallSelection());
+        }
+        else if (e.type == sf::Event::MouseButtonReleased && e.mouseButton.button == sf::Mouse::Right)
+        {
+            selectionHeld = false;
+            sf::Vector2i mouse = getRelativeMouse();
+            mapWalls.push_back(Wall(selectionStart.x, selectionStart.y, mouse.x, mouse.y, DEFAULT_WALL_THICKNESS, startColor, endColor));
+            updateSelectedWall(&*(--mapWalls.end()));
+        }
+        else if (e.type == sf::Event::KeyPressed && e.key.code == sf::Keyboard::Key::Delete)
+        {
+            if (currentlySelectedWall != nullptr)
+            {
+                clickDeleteWallButton(); // simulate clicking the delete wall button (i.e. delete the current wall)
+            }
+            else
+            {
+                // otherwise delete the wall under the current mouse selection
+                Wall* toDelete = getMouseWallSelection();
+
+                for (auto it = mapWalls.begin(); it != mapWalls.end(); it++)
+                {
+                    if (&*it == toDelete)
+                    {
+                        mapWalls.erase(it);
+                        break;
+                    }
+                }
+            }
         }
     }
-    else if (e.type == sf::Event::MouseButtonPressed && e.mouseButton.button == sf::Mouse::Right)
+    else
     {
-        selectionHeld = true;
-        selectionStart = sf::Vector2f(getRelativeMouseX(), getRelativeMouseY());
-    }
-    else if (e.type == sf::Event::MouseButtonReleased && e.mouseButton.button == sf::Mouse::Right)
-    {
-        selectionHeld = false;
-        mapWalls.push_back(Wall(selectionStart.x, selectionStart.y, getRelativeMouseX(), getRelativeMouseY(), DEFAULT_WALL_THICKNESS, startColor, endColor));
-        updateSelectedWall(&*(--mapWalls.end()));
+        if (e.type == sf::Event::MouseButtonReleased && e.mouseButton.button == sf::Mouse::Right)
+        {
+            selectionHeld = false;
+            sf::Vector2i mouse = getRelativeMouse();
+            mapCheckpoints.push_back(Checkpoint(selectionStart.x, selectionStart.y, mouse.x, mouse.y, nullptr));
+            updateSelectedCheckpoint(&*(--mapCheckpoints.end()));
+        }
     }
 }
 
@@ -219,11 +292,20 @@ void Editor::renderSelection()
     {
         sf::Vertex selectionLines[2];
 
-        selectionLines[0].color = startColor;
-        selectionLines[1].color = endColor;
+        if (selectionType == EditSelection::Wall)
+        {
+            selectionLines[0].color = startColor;
+            selectionLines[1].color = endColor;
+        }
+        else
+        {
+            selectionLines[0].color = sf::Color::White;
+            selectionLines[1].color = sf::Color::White;
+        }
         
         selectionLines[0].position = selectionStart;
-        selectionLines[1].position = sf::Vector2f(getRelativeMouseX(), getRelativeMouseY());
+        sf::Vector2i mouse = getRelativeMouse();
+        selectionLines[1].position = sf::Vector2f(mouse.x, mouse.y);
 
         window.draw(selectionLines, 2, sf::PrimitiveType::Lines);
     }
@@ -232,6 +314,51 @@ void Editor::renderSelection()
     {
         (*it).render(window);
     }
+
+    if (selectionType == EditSelection::Checkpoint)
+    {
+        // Render checkpoints
+        sf::Vertex checkpointLines[2];
+
+        for (auto it = mapCheckpoints.begin(); it != mapCheckpoints.end(); it++)
+        {
+            if (&*it == currentlySelectedCheckpoint)
+            {
+                checkpointLines[0].color = sf::Color::White;
+                checkpointLines[1].color = sf::Color::White;
+            }
+            else
+            {
+                checkpointLines[0].color = sf::Color::Green;
+                checkpointLines[1].color = sf::Color::Green;
+            }
+
+            checkpointLines[0].position = sf::Vector2f((*it).getX1(), (*it).getY1());
+            checkpointLines[1].position = sf::Vector2f((*it).getX2(), (*it).getY2());
+
+            window.draw(checkpointLines, 2, sf::PrimitiveType::Lines);
+        }
+    }
+}
+
+Wall* Editor::getMouseWallSelection()
+{
+    // if the cursor is within MIN_SELECTION_DISTANCE to a wall, change the current selection to it
+    Wall* closest = nullptr;
+    float closestDistance = MIN_SELECTION_DISTANCE;
+
+    for (auto it = mapWalls.begin(); it != mapWalls.end(); it++)
+    {
+        sf::Vector2i mouse = getRelativeMouse();
+        float dist = Wall::distanceToLine(mouse.x, mouse.y, (*it).getX1(), (*it).getY1(), (*it).getX2(), (*it).getY2());
+        if (dist < closestDistance)
+        {
+            closest = &*it;
+            closestDistance = dist;
+        }
+    }
+
+    return closest;
 }
 
 void Editor::updateSelectedWall(Wall* newSelection)
@@ -246,13 +373,49 @@ void Editor::updateSelectedWall(Wall* newSelection)
     {
         currentlySelectedWall->setThickness(SELECTED_WALL_THICKNESS);
 
-        startColorR->setNewPlaceholder(std::to_string(currentlySelectedWall->getColor1().r));
-        startColorG->setNewPlaceholder(std::to_string(currentlySelectedWall->getColor1().g));
-        startColorB->setNewPlaceholder(std::to_string(currentlySelectedWall->getColor1().b));
+        std::ostringstream ss; // have to use string stream because its the only way that formats properly
+        ss << (currentlySelectedWall->getX1());
+        startXInput->setNewString(ss.str());
+        ss.str(std::string()); // clears the ss
+        ss << (currentlySelectedWall->getY1());
+        startYInput->setNewString(ss.str());
 
-        endColorR->setNewPlaceholder(std::to_string(currentlySelectedWall->getColor2().r));
-        endColorG->setNewPlaceholder(std::to_string(currentlySelectedWall->getColor2().g));
-        endColorB->setNewPlaceholder(std::to_string(currentlySelectedWall->getColor2().b));
+        ss.str(std::string());
+        ss << (currentlySelectedWall->getX2());
+        endXInput->setNewString(ss.str());
+        ss.str(std::string());
+        ss << (currentlySelectedWall->getY2());
+        endYInput->setNewString(ss.str());
+
+        startColorR->setNewString(std::to_string(currentlySelectedWall->getColor1().r));
+        startColorG->setNewString(std::to_string(currentlySelectedWall->getColor1().g));
+        startColorB->setNewString(std::to_string(currentlySelectedWall->getColor1().b));
+
+        endColorR->setNewString(std::to_string(currentlySelectedWall->getColor2().r));
+        endColorG->setNewString(std::to_string(currentlySelectedWall->getColor2().g));
+        endColorB->setNewString(std::to_string(currentlySelectedWall->getColor2().b));
+    }
+}
+
+void Editor::updateSelectedCheckpoint(Checkpoint* newSelection)
+{
+    currentlySelectedCheckpoint = newSelection;
+
+    if (currentlySelectedWall != nullptr)
+    {
+        std::ostringstream ss; // have to use string stream because its the only way that formats properly
+        ss << (currentlySelectedWall->getX1());
+        startXInput->setNewString(ss.str());
+        ss.str(std::string()); // clears the ss
+        ss << (currentlySelectedWall->getY1());
+        startYInput->setNewString(ss.str());
+
+        ss.str(std::string());
+        ss << (currentlySelectedWall->getX2());
+        endXInput->setNewString(ss.str());
+        ss.str(std::string());
+        ss << (currentlySelectedWall->getY2());
+        endYInput->setNewString(ss.str());
     }
 }
 
@@ -283,8 +446,10 @@ void Editor::openEditting()
     timeTrialStart->setOrigin(KART_LENGTH / 2.0f, KART_WIDTH / 2.0f);
     setStartAngle(0.0f);
 
+
     editorKeyboardInput = new KeyboardInput();
     editorKart = new Kart("Edit Mode", editorKeyboardInput, sf::Color::Yellow, 0, 0, startAngle, nullptr, 0);
+
 
     resetPositionButton = new Button([this]() { clickResetPositionButton(); }, "Reset Position", 16, font, 
         Transform(5, 125, 5, 30, 0.0f, 0.0f, 0.0f, 0.0f), window);
@@ -295,10 +460,12 @@ void Editor::openEditting()
     mousePositionLabel = new Label(LabelAlign::LeftMiddle, "", 16, font, 
         Transform(135, 135, 40, 65, 0.0f, 0.0f, 0.0f, 0.0f), window);
 
+
     saveButton = new Button([this]() { clickSaveButton(); }, "Save", 16, font, 
         Transform(-105, -60, 5, 30, 1.0f, 1.0f, 0.0f, 0.0f), window);
     quitButton = new Button([this]() { clickQuitButton(); }, "Quit", 16, font, 
         Transform(-50, -5, 5, 30, 1.0f, 1.0f, 0.0f, 0.0f), window);
+
 
     currentEditSelection = new ToggleGroup(2);
     editWallToggle = new Toggle([this](bool active) { toggleEditWallToggle(active); }, currentEditSelection, true, LabelAlign::RightMiddle, "Walls", 16, font, 
@@ -308,37 +475,82 @@ void Editor::openEditting()
     currentEditSelection->setToggle(0, editWallToggle);
     currentEditSelection->setToggle(1, editCheckpointToggle);
 
+
+    startPositionLabel = new Label(LabelAlign::CenterBottom, "Start Position", 16, font,
+        Transform(5, 165, -60, -60, 0.0f, 0.0f, 1.0f, 1.0f), window);
+
+    startXInput = new TextField(TextFieldType::FloatingNumeric,
+        [this](TextFieldResult result) { 
+            if (currentlySelectedWall != nullptr) { currentlySelectedWall->setX1(result); } 
+            if (currentlySelectedCheckpoint != nullptr) { currentlySelectedCheckpoint->setX1(result); } },
+        "X", "0", 16, font,
+        Transform(5, 80, -30, -5, 0.0f, 0.0f, 1.0f, 1.0f), window);
+    startYInput = new TextField(TextFieldType::FloatingNumeric,
+        [this](TextFieldResult result) { 
+            if (currentlySelectedWall != nullptr) { currentlySelectedWall->setY1(result); }
+            if (currentlySelectedCheckpoint != nullptr) { currentlySelectedCheckpoint->setY1(result); } },
+        "Y", "0", 16, font,
+        Transform(90, 165, -30, -5, 0.0f, 0.0f, 1.0f, 1.0f), window);
+
+
+    endPositionLabel = new Label(LabelAlign::CenterBottom, "End Position", 16, font,
+        Transform(215, 375, -60, -60, 0.0f, 0.0f, 1.0f, 1.0f), window);
+
+    endXInput = new TextField(TextFieldType::FloatingNumeric,
+        [this](TextFieldResult result) {
+            if (currentlySelectedWall != nullptr) { currentlySelectedWall->setX2(result); }
+            if (currentlySelectedCheckpoint != nullptr) { currentlySelectedCheckpoint->setX2(result); } },
+        "X", "0", 16, font,
+        Transform(215, 290, -30, -5, 0.0f, 0.0f, 1.0f, 1.0f), window);
+    endYInput = new TextField(TextFieldType::FloatingNumeric,
+        [this](TextFieldResult result) {
+            if (currentlySelectedWall != nullptr) { currentlySelectedWall->setY2(result); }
+            if (currentlySelectedCheckpoint != nullptr) { currentlySelectedCheckpoint->setY2(result); } },
+        "Y", "0", 16, font,
+        Transform(300, 375, -30, -5, 0.0f, 0.0f, 1.0f, 1.0f), window);
+
+
+    deleteWallButton = new Button([this]() { clickDeleteWallButton(); }, "Delete", 16, font,
+        Transform(425, 480, -30, -5, 0.0f, 0.0f, 1.0f, 1.0f), window);
+
+
     startColorLabel = new Label(LabelAlign::CenterBottom, "Start Color", 16, font,
         Transform(-355, -205, -60, -60, 1.0f, 1.0f, 1.0f, 1.0f), window);
 
     startColorR = new TextField(TextFieldType::UnsignedByte,
-        [this](TextFieldResult result) { startColor.r = result.intResult; if (currentlySelectedWall != nullptr) { currentlySelectedWall->setColor1(startColor); } },
+        [this](TextFieldResult result) { startColor.r = result.intResult; 
+            if (currentlySelectedWall != nullptr) { currentlySelectedWall->setColor1(startColor); } },
         "Red", std::to_string(startColor.r), 16, font,
-        Transform(-355, -310, -30, -3, 1.0f, 1.0f, 1.0f, 1.0f), window);
+        Transform(-355, -310, -30, -5, 1.0f, 1.0f, 1.0f, 1.0f), window);
     startColorG = new TextField(TextFieldType::UnsignedByte,
-        [this](TextFieldResult result) { startColor.g = result.intResult; if (currentlySelectedWall != nullptr) { currentlySelectedWall->setColor1(startColor); } },
+        [this](TextFieldResult result) { startColor.g = result.intResult; 
+            if (currentlySelectedWall != nullptr) { currentlySelectedWall->setColor1(startColor); } },
         "Green", std::to_string(startColor.g), 16, font,
-        Transform(-300, -255, -30, -3, 1.0f, 1.0f, 1.0f, 1.0f), window);
+        Transform(-300, -255, -30, -5, 1.0f, 1.0f, 1.0f, 1.0f), window);
     startColorB = new TextField(TextFieldType::UnsignedByte,
-        [this](TextFieldResult result) { startColor.b = result.intResult; if (currentlySelectedWall != nullptr) { currentlySelectedWall->setColor1(startColor); } },
+        [this](TextFieldResult result) { startColor.b = result.intResult; 
+            if (currentlySelectedWall != nullptr) { currentlySelectedWall->setColor1(startColor); } },
         "Blue", std::to_string(startColor.b), 16, font,
-        Transform(-245, -205, -30, -3, 1.0f, 1.0f, 1.0f, 1.0f), window);
+        Transform(-245, -205, -30, -5, 1.0f, 1.0f, 1.0f, 1.0f), window);
 
     endColorLabel = new Label(LabelAlign::CenterBottom, "End Color", 16, font,
         Transform(-155, -5, -60, -60, 1.0f, 1.0f, 1.0f, 1.0f), window);
 
     endColorR = new TextField(TextFieldType::UnsignedByte,
-        [this](TextFieldResult result) { endColor.r = result.intResult; if (currentlySelectedWall != nullptr) { currentlySelectedWall->setColor2(endColor); } },
+        [this](TextFieldResult result) { endColor.r = result.intResult; 
+            if (currentlySelectedWall != nullptr) { currentlySelectedWall->setColor2(endColor); } },
         "Red", std::to_string(endColor.r), 16, font,
-        Transform(-155, -110, -30, -3, 1.0f, 1.0f, 1.0f, 1.0f), window);
+        Transform(-155, -110, -30, -5, 1.0f, 1.0f, 1.0f, 1.0f), window);
     endColorG = new TextField(TextFieldType::UnsignedByte,
-        [this](TextFieldResult result) { endColor.g = result.intResult; if (currentlySelectedWall != nullptr) { currentlySelectedWall->setColor2(endColor); } },
+        [this](TextFieldResult result) { endColor.g = result.intResult; 
+            if (currentlySelectedWall != nullptr) { currentlySelectedWall->setColor2(endColor); } },
         "Green", std::to_string(endColor.g), 16, font,
-        Transform(-100, -55, -30, -3, 1.0f, 1.0f, 1.0f, 1.0f), window);
+        Transform(-100, -55, -30, -5, 1.0f, 1.0f, 1.0f, 1.0f), window);
     endColorB = new TextField(TextFieldType::UnsignedByte,
-        [this](TextFieldResult result) { endColor.b = result.intResult; if (currentlySelectedWall != nullptr) { currentlySelectedWall->setColor2(endColor); } },
+        [this](TextFieldResult result) { endColor.b = result.intResult; 
+            if (currentlySelectedWall != nullptr) { currentlySelectedWall->setColor2(endColor); } },
         "Blue", std::to_string(endColor.b), 16, font,
-        Transform(-45, -5, -30, -3, 1.0f, 1.0f, 1.0f, 1.0f), window);
+        Transform(-45, -5, -30, -5, 1.0f, 1.0f, 1.0f, 1.0f), window);
 }
 
 void Editor::setStartAngle(float newStartAngle)
@@ -385,11 +597,13 @@ void Editor::toggleUseKartToggle(bool active)
 
 void Editor::toggleEditWallToggle(bool active) // active will never be false because its part of a group
 {
+    updateSelectedCheckpoint(nullptr);
     selectionType = EditSelection::Wall;
 }
 
 void Editor::toggleEditCheckpointToggle(bool active) // active will never be false because its part of a group
 {
+    updateSelectedWall(nullptr);
     selectionType = EditSelection::Checkpoint;
 }
 
@@ -403,23 +617,62 @@ void Editor::clickQuitButton()
     // TODO
 }
 
-int Editor::getRelativeMouseX()
+void Editor::clickDeleteWallButton()
 {
-    float returnable = xCamera + sf::Mouse::getPosition(window).x - float(window.getSize().x) / 2.0f;
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LControl) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::RControl))
+    for (auto it = mapWalls.begin(); it != mapWalls.end(); it++)
     {
-        returnable = roundf(returnable / 50.0f) * 50.0f;
+        if (&*it == currentlySelectedWall)
+        {
+            mapWalls.erase(it);
+            break;
+        }
     }
-    return roundf(returnable);
+
+    updateSelectedWall(nullptr);
 }
 
-int Editor::getRelativeMouseY()
+sf::Vector2i Editor::getRelativeMouse()
 {
-    float returnable = yCamera + sf::Mouse::getPosition(window).y - float(window.getSize().y) / 2.0f;
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LControl) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::RControl))
-    {
-        returnable = roundf(returnable / 50.0f) * 50.0f;
-    }
-    return roundf(returnable);
-}
+    float x = xCamera + sf::Mouse::getPosition(window).x - float(window.getSize().x) / 2.0f;
+    float y = yCamera + sf::Mouse::getPosition(window).y - float(window.getSize().y) / 2.0f;
 
+    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LControl) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::RControl)) // Control snaps the wall to increments of 50 units
+    {
+        x = roundf(x / CONTROL_SNAP_INCRERMENT) * CONTROL_SNAP_INCRERMENT;
+        y = roundf(y / CONTROL_SNAP_INCRERMENT) * CONTROL_SNAP_INCRERMENT;
+    }
+    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LShift) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::RShift)) // Shift snaps the wall to other walls within 25 units
+    {
+        float closestX = x;
+        float closestY = y;
+        float closestDistance = SHIFT_SNAP_DISTANCE;
+
+        for (auto it = mapWalls.begin(); it != mapWalls.end(); it++)
+        {
+            // start
+            float xDist = x - (*it).getX1();
+            float yDist = y - (*it).getY1();
+            float dist = sqrtf(xDist * xDist + yDist * yDist);
+            if (dist < closestDistance)
+            {
+                closestX = (*it).getX1();
+                closestY = (*it).getY1();
+                closestDistance = dist;
+            }
+
+            // end
+            xDist = x - (*it).getX2();
+            yDist = y - (*it).getY2();
+            dist = sqrtf(xDist * xDist + yDist * yDist);
+            if (dist < closestDistance)
+            {
+                closestX = (*it).getX2();
+                closestY = (*it).getY2();
+                closestDistance = dist;
+            }
+        }
+        x = closestX;
+        y = closestY;
+    }
+    return sf::Vector2i(roundf(x), roundf(y));
+}

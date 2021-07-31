@@ -3,6 +3,7 @@
 #include <SFML/Graphics.hpp>
 
 #include <string>
+#include <sstream>
 #include <iostream>
 #include <list>
 
@@ -16,6 +17,8 @@
 #define SELECTED_WALL_THICKNESS 4.0f
 
 #define MIN_SELECTION_DISTANCE 10.0f
+#define CONTROL_SNAP_INCRERMENT 50.0f
+#define SHIFT_SNAP_DISTANCE 25.0f
 
 /*
 All the possible states the editor can be in, ex. MainMenu, Editting, etc.
@@ -56,8 +59,14 @@ private:
 	// Renders everything to do with selections
 	void renderSelection();
 
+	// Returns the wall that can currently be selected by the mouse
+	Wall* getMouseWallSelection();
+
 	// Sets the appropriate values after selecting a new Wall
 	void updateSelectedWall(Wall* newSelection);
+
+	// Sets the appropriate values after selecting a new Checkpoint
+	void updateSelectedCheckpoint(Checkpoint* newSelection);
 
 	// Creates all the GUI elements for the MainMenu state
 	void openMainMenu();
@@ -90,10 +99,11 @@ private:
 	// When the quitButton is clicked: confirm the quit, then go change the state to the main menu
 	void clickQuitButton();
 
-	// Returns the x position of the mouse relative to the current camera
-	int getRelativeMouseX();
-	// Returns the y position of the mouse relative to the current camera
-	int getRelativeMouseY();
+	// When the deleteWallButton is clicked: delete the currently selected wall
+	void clickDeleteWallButton();
+
+	// Returns the position of the mouse relative to the current camera
+	sf::Vector2i getRelativeMouse();
 
 	sf::RenderWindow& window;
 	sf::Font& font;
@@ -123,6 +133,15 @@ private:
 	Button* saveButton;
 	Button* quitButton;
 
+	Label* startPositionLabel;
+	TextField* startXInput;
+	TextField* startYInput;
+	Label* endPositionLabel;
+	TextField* endXInput;
+	TextField* endYInput;
+
+	Button* deleteWallButton;
+
 	Label* startColorLabel;
 	TextField* startColorR;
 	TextField* startColorG;
@@ -144,7 +163,10 @@ private:
 	sf::Color startColor;
 	sf::Color endColor;
 
+	Checkpoint* currentlySelectedCheckpoint;
+
 	// Map Data
 	float startAngle;
 	std::list<Wall> mapWalls;
+	std::list<Checkpoint> mapCheckpoints;
 };

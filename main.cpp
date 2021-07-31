@@ -68,10 +68,10 @@ int main()
     raceGroup.walls[14] = &wO;
 
     Checkpoint** race = new Checkpoint*[4];
-    race[0] = new Checkpoint(950, 250, 900, 50, raceGroup);
-    race[1] = new Checkpoint(1050, 250, 1300, 400, raceGroup);
-    race[2] = new Checkpoint(550, 750, 600, 950, raceGroup);
-    race[3] = new Checkpoint(450, 750, 200, 600, raceGroup);
+    race[0] = new Checkpoint(950, 250, 900, 50, &raceGroup);
+    race[1] = new Checkpoint(1050, 250, 1300, 400, &raceGroup);
+    race[2] = new Checkpoint(550, 750, 600, 950, &raceGroup);
+    race[3] = new Checkpoint(450, 750, 200, 600, &raceGroup);
 
     Kart kart("Test", &input, sf::Color::Yellow, 550, 550, -40, race, 4);
 

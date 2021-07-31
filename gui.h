@@ -267,8 +267,8 @@ public:
 	TextField(TextFieldType type, std::function<void(TextFieldResult)> done, std::string labelText, std::string placeholderText, int fontSize, sf::Font& font, Transform transform, sf::RenderWindow& window);
 	TextField(TextFieldType type, std::function<void(TextFieldResult)> done, std::string labelText, std::string placeholderText, int fontSize, sf::Font& font, Transform transform, sf::Color unselected, sf::Color highlighted, sf::Color selected, sf::Color outline, sf::RenderWindow& window);
 
-	// Replaces the current text with a new placeholder text, also resets the current textString
-	void setNewPlaceholder(std::string newPlaceholder);
+	// Replaces the current text with a new string
+	void setNewString(std::string newString);
 
 	void resize(float screenWidth, float screenHeight) override;
 

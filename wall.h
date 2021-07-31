@@ -45,6 +45,8 @@ public:
 	sf::Color getColor1() { return verticies[0].color; }
 	sf::Color getColor2() { return verticies[2].color; }
 private:
+	void resetVerticePositions();
+
 	sf::Vertex verticies[4];
 
 	float thickness;

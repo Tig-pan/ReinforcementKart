@@ -72,12 +72,13 @@ TextField::TextField(TextFieldType type, std::function<void(TextFieldResult)> do
 	resize(window.getSize().x, window.getSize().y);
 }
 
-void TextField::setNewPlaceholder(std::string newPlaceholder)
+void TextField::setNewString(std::string newString)
 {
-	text.setString(newPlaceholder);
-	text.setFillColor(PLACEHOLDER_COLOR);
+	textString = newString;
 
-	textString = "";
+	text.setString(textString);
+	text.setFillColor(sf::Color::White);
+
 	active = false;
 }
 
@@ -229,7 +230,7 @@ bool TextField::handleEvent(sf::RenderWindow& window, sf::Event& e)
 			updateCursorPosition();
 		}
 	}
-	return false;
+	return active;
 }
 
 void TextField::render(sf::RenderWindow& window)
