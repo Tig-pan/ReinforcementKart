@@ -8,3 +8,4 @@
 #include "checkpoint.h"
 #include "gui.h"
 #include "editor.h"
+#include "game.h"

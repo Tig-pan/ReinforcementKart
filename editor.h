@@ -14,7 +14,6 @@
 #include "kart.h"
 
 #define CAMERA_SPEED 10.0f
-#define DEFAULT_WALL_THICKNESS 2.0f
 #define SELECTED_WALL_THICKNESS 6.0f
 
 #define MIN_SELECTION_DISTANCE 10.0f
