@@ -141,31 +141,34 @@ void Editor::run()
         switch (state)
         {
         case EditorState::Editting:
-            if (currentlyUsingKart)
+            if (!isSaveMenuOpen)
             {
-                editorKart->tick();
-                editorKart->update();
+                if (currentlyUsingKart)
+                {
+                    editorKart->tick();
+                    editorKart->update();
 
-                xCamera = editorKart->getX();
-                yCamera = editorKart->getY();
-            }
-            else
-            {
-                if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Left) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A))
-                {
-                    xCamera -= CAMERA_SPEED;
+                    xCamera = editorKart->getX();
+                    yCamera = editorKart->getY();
                 }
-                if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Right) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D))
+                else
                 {
-                    xCamera += CAMERA_SPEED;
-                }
-                if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Down) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::S))
-                {
-                    yCamera += CAMERA_SPEED;
-                }
-                if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Up) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::W))
-                {
-                    yCamera -= CAMERA_SPEED;
+                    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Left) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A))
+                    {
+                        xCamera -= CAMERA_SPEED;
+                    }
+                    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Right) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D))
+                    {
+                        xCamera += CAMERA_SPEED;
+                    }
+                    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Down) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::S))
+                    {
+                        yCamera += CAMERA_SPEED;
+                    }
+                    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Up) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::W))
+                    {
+                        yCamera -= CAMERA_SPEED;
+                    }
                 }
             }
 
@@ -700,9 +703,9 @@ void Editor::openEditting()
         "Save File Name:", "save-file.map", 18, font,
         Transform(-110, 110, -15, 15, 0.5f, 0.5f, 0.5f, 0.5f), window);
     cancelSaveButton = new Button([this]() { isSaveMenuOpen = false; }, "Cancel", 18, font,
-        Transform(-185, -120, -15, 15, 0.5f, 0.5f, 0.5f, 0.5f), window);
+        Transform(-195, -120, -15, 15, 0.5f, 0.5f, 0.5f, 0.5f), window);
     confirmSaveButton = new Button([this]() { saveMap(); }, "Confirm", 18, font,
-        Transform(120, 185, -15, 15, 0.5f, 0.5f, 0.5f, 0.5f), window);
+        Transform(120, 195, -15, 15, 0.5f, 0.5f, 0.5f, 0.5f), window);
 }
 
 void Editor::setStartAngle(TextFieldResult result)
@@ -762,7 +765,7 @@ void Editor::toggleEditCheckpointToggle(bool active) // active will never be fal
 void Editor::saveMap()
 {
     /* file format:
-    * 
+    *
     * startAngle
     * number of walls
     * (x1, y1, x2, y2, startColorR, startColorG, startColorB, endColorR, endColorG, endColorB) * number of walls
@@ -770,11 +773,77 @@ void Editor::saveMap()
     * (x1, y1, x2, y2, number of walls in checkpoint group, (wall index) * number of walls in checkpoint group) * number of checkpoints
     */
 
+    uint8_t colorTemp;
+    float temp;
+
     std::ofstream output;
     output.open(saveFileName, std::ios::out | std::ios::binary);
+
     output.write((char*)&startAngle, sizeof(startAngle));
-    int numberOfWalls = mapWalls.size();
-    output.write((char*)&numberOfWalls, sizeof(numberOfWalls));
+
+    int number = mapWalls.size();
+    output.write((char*)&number, sizeof(number));
+
+    for (auto it = mapWalls.begin(); it != mapWalls.end(); it++)
+    {
+        temp = (*it).getLine().x1;
+        output.write((char*)&temp, sizeof(temp));
+        temp = (*it).getLine().y1;
+        output.write((char*)&temp, sizeof(temp));
+        temp = (*it).getLine().x2;
+        output.write((char*)&temp, sizeof(temp));
+        temp = (*it).getLine().y2;
+        output.write((char*)&temp, sizeof(temp));
+
+        colorTemp = (*it).getColor1().r;
+        output.write((char*)&colorTemp, sizeof(colorTemp));
+        colorTemp = (*it).getColor1().g;
+        output.write((char*)&colorTemp, sizeof(colorTemp));
+        colorTemp = (*it).getColor1().b;
+        output.write((char*)&colorTemp, sizeof(colorTemp));
+
+        colorTemp = (*it).getColor2().r;
+        output.write((char*)&colorTemp, sizeof(colorTemp));
+        colorTemp = (*it).getColor2().g;
+        output.write((char*)&colorTemp, sizeof(colorTemp));
+        colorTemp = (*it).getColor2().b;
+        output.write((char*)&colorTemp, sizeof(colorTemp));
+    }
+
+    number = mapCheckpoints.size();
+    output.write((char*)&number, sizeof(number));
+
+    for (auto it = mapCheckpoints.begin(); it != mapCheckpoints.end(); it++)
+    {
+        temp = (*it).getLine().x1;
+        output.write((char*)&temp, sizeof(temp));
+        temp = (*it).getLine().y1;
+        output.write((char*)&temp, sizeof(temp));
+        temp = (*it).getLine().x2;
+        output.write((char*)&temp, sizeof(temp));
+        temp = (*it).getLine().y2;
+        output.write((char*)&temp, sizeof(temp));
+
+        number = (*it).getWalls().size();
+        output.write((char*)&number, sizeof(number));
+
+        for (auto jt = (*it).getWalls().begin(); jt != (*it).getWalls().end(); jt++)
+        {
+            int index = 0;
+            for (auto kt = mapWalls.begin(); kt != mapWalls.end(); kt++, index++)
+            {
+                if (&*kt == *jt)
+                {
+                    output.write((char*)&index, sizeof(index));
+                    break;
+                }
+            }
+        }
+    }
+
+    output.close();
+
+    isSaveMenuOpen = false;
 }
 
 void Editor::clickQuitButton()

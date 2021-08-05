@@ -64,7 +64,7 @@ public:
 	{
 		for (auto it = walls.begin(); it != walls.end(); it++)
 		{
-			if (&*it == &contains)
+			if (*it == contains)
 			{
 				return true;
 			}
