@@ -274,27 +274,27 @@ void Kart::doCollisions()
 		float yNormal;
 		float time = 2.0f;
 
-		for (int i = 0; i < race[currentCheckpoint]->getWallGroup()->count; i++)
+		for (int i = 0; i < race[currentCheckpoint]->getWallsInGroup(); i++)
 		{
-			Wall* wall = race[currentCheckpoint]->getWallGroup()->walls[i];
+			Wall* wall = race[currentCheckpoint]->getWallGroup()[i];
 
-			if (getLineSegmentIntersection(beforeFLX, beforeFLY, afterFLX, afterFLY,
-				wall->getX1(), wall->getY1(), wall->getX2(), wall->getY2(), &xIntersect, &yIntersect, &xNormal, &yNormal, &time))
+			if (Line::getLineSegmentIntersection(Line(beforeFLX, beforeFLY, afterFLX, afterFLY),
+				wall->getLine(), &xIntersect, &yIntersect, &xNormal, &yNormal, &time))
 			{
 				corner = Corner::FrontLeft;
 			}
-			if (getLineSegmentIntersection(beforeFRX, beforeFRY, afterFRX, afterFRY,
-				wall->getX1(), wall->getY1(), wall->getX2(), wall->getY2(), &xIntersect, &yIntersect, &xNormal, &yNormal, &time))
+			if (Line::getLineSegmentIntersection(Line(beforeFRX, beforeFRY, afterFRX, afterFRY),
+				wall->getLine(), &xIntersect, &yIntersect, &xNormal, &yNormal, &time))
 			{
 				corner = Corner::FrontRight;
 			}
-			if (getLineSegmentIntersection(beforeBLX, beforeBLY, afterBLX, afterBLY,
-				wall->getX1(), wall->getY1(), wall->getX2(), wall->getY2(), &xIntersect, &yIntersect, &xNormal, &yNormal, &time))
+			if (Line::getLineSegmentIntersection(Line(beforeBLX, beforeBLY, afterBLX, afterBLY),
+				wall->getLine(), &xIntersect, &yIntersect, &xNormal, &yNormal, &time))
 			{
 				corner = Corner::BackLeft;
 			}
-			if (getLineSegmentIntersection(beforeBRX, beforeBRY, afterBRX, afterBRY,
-				wall->getX1(), wall->getY1(), wall->getX2(), wall->getY2(), &xIntersect, &yIntersect, &xNormal, &yNormal, &time))
+			if (Line::getLineSegmentIntersection(Line(beforeBRX, beforeBRY, afterBRX, afterBRY),
+				wall->getLine(), &xIntersect, &yIntersect, &xNormal, &yNormal, &time))
 			{
 				corner = Corner::BackRight;
 			}
@@ -383,10 +383,12 @@ void Kart::doCheckpoints(float xPositionBefore, float yPositionBefore)
 	float yNormal;
 	float time;
 
+	Line kartMovement = Line(xPositionBefore, yPositionBefore, xPosition, yPosition);
+
 	// attempt the checkpoint behind
 	int behindIndex = currentCheckpoint == 0 ? checkpointCount - 1 : currentCheckpoint - 1;
-	if (getLineSegmentIntersection(xPositionBefore, yPositionBefore, xPosition, yPosition,
-		race[behindIndex]->getX1(), race[behindIndex]->getY1(), race[behindIndex]->getX2(), race[behindIndex]->getY2(),
+	if (Line::getLineSegmentIntersection(kartMovement,
+		race[behindIndex]->getLine(),
 		&xIntersect, &yIntersect, &xNormal, &yNormal, &time))
 	{
 		currentCheckpoint--;
@@ -397,8 +399,8 @@ void Kart::doCheckpoints(float xPositionBefore, float yPositionBefore)
 	}
 
 	// attempt the checkpoint ahead
-	if (getLineSegmentIntersection(xPositionBefore, yPositionBefore, xPosition, yPosition,
-		race[currentCheckpoint]->getX1(), race[currentCheckpoint]->getY1(), race[currentCheckpoint]->getX2(), race[currentCheckpoint]->getY2(),
+	if (Line::getLineSegmentIntersection(kartMovement,
+		race[currentCheckpoint]->getLine(),
 		&xIntersect, &yIntersect, &xNormal, &yNormal, &time))
 	{
 		currentCheckpoint++;
@@ -422,64 +424,7 @@ void Kart::doCheckpoints(float xPositionBefore, float yPositionBefore)
 	// calculate checkpoint progress
 	behindIndex = currentCheckpoint == 0 ? checkpointCount - 1 : currentCheckpoint - 1;
 
-	float behindDistance = Wall::distanceToLine(xPosition, yPosition, race[behindIndex]->getX1(), race[behindIndex]->getY1(), race[behindIndex]->getX2(), race[behindIndex]->getY2());
-	float forwardDistance = Wall::distanceToLine(xPosition, yPosition, race[currentCheckpoint]->getX1(), race[currentCheckpoint]->getY1(), race[currentCheckpoint]->getX2(), race[currentCheckpoint]->getY2());
+	float behindDistance = Line::distanceToLine(xPosition, yPosition, race[behindIndex]->getLine());
+	float forwardDistance = Line::distanceToLine(xPosition, yPosition, race[currentCheckpoint]->getLine());
 	checkpointProgress = behindDistance / (behindDistance + forwardDistance);
-}
-
-bool Kart::getLineSegmentIntersection(float kx1, float ky1, float kx2, float ky2, float wx1, float wy1, float wx2, float wy2, float* ox, float* oy, float* onx, float* ony, float* otime)
-{
-	// the k's refer to the kart, the w's refer to the wall or whatever else is being checked against, the o's are the out's and receive values in the event of a collision
-	// to use this in a raycast scenario, have k1 be the starting position, and k2 be the next position
-	float lineKX = kx2 - kx1;
-	float lineKY = ky2 - ky1;
-	float lineWX = wx2 - wx1;
-	float lineWY = wy2 - wy1;
-
-	float denominator = lineKX * lineWY - lineKY * lineWX;
-	if (denominator == 0.0f) // lines are parallel, and therefore don't intersect
-	{
-		return false;
-	}
-	float kFraction = (lineKX * (ky1 - wy1) - lineKY * (kx1 - wx1)) / denominator; // aka time
-	float wFraction = (lineWX * (ky1 - wy1) - lineWY * (kx1 - wx1)) / denominator;
-
-	if (kFraction >= 0.0f && kFraction <= 1.0f && wFraction >= 0.0f && wFraction <= 1.0f && kFraction < *otime)
-	{
-		// only overwrite the time if this one is shorter
-		*otime = kFraction;
-		*ox = kx1 + kFraction * lineKX;
-		*oy = ky1 + kFraction * lineKY;
-		float normalMagnitude = sqrtf(lineWX * lineWX + lineWY * lineWY);
-		if (((lineWX == 0.0f && kx1 > wx1) || (ky1 < (lineWY / lineWX) * (kx1 - wx1) + wy1)))
-		{
-			if (lineWX >= 0.0f)
-			{
-				*onx = lineWY / normalMagnitude; // x normal
-				*ony = -lineWX / normalMagnitude; // y normal
-			}
-			else
-			{
-				*onx = -lineWY / normalMagnitude; // x normal
-				*ony = lineWX / normalMagnitude; // y normal
-			}
-		}
-		else
-		{
-			if (lineWX >= 0.0f)
-			{
-				*onx = -lineWY / normalMagnitude; // x normal
-				*ony = lineWX / normalMagnitude; // y normal
-			}
-			else
-			{
-				*onx = lineWY / normalMagnitude; // x normal
-				*ony = -lineWX / normalMagnitude; // y normal
-			}
-		}
-
-		return true; // only return true if this is the first collision (kFraction < *otime)
-	}
-
-	return false;
 }

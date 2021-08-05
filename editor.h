@@ -6,6 +6,7 @@
 #include <sstream>
 #include <iostream>
 #include <list>
+#include <fstream>
 
 #include "gui.h"
 #include "constants.h"
@@ -14,7 +15,7 @@
 
 #define CAMERA_SPEED 10.0f
 #define DEFAULT_WALL_THICKNESS 2.0f
-#define SELECTED_WALL_THICKNESS 4.0f
+#define SELECTED_WALL_THICKNESS 6.0f
 
 #define MIN_SELECTION_DISTANCE 10.0f
 #define CONTROL_SNAP_INCRERMENT 50.0f
@@ -36,6 +37,16 @@ enum class EditSelection
 {
 	Wall,
 	Checkpoint
+};
+
+/*
+An enum that dictates if you can currently add or remove walls from a checkpoint group.
+*/
+enum class CheckpointWallMode
+{
+	SelectCheckpoint,
+	Add,
+	Remove
 };
 
 /*
@@ -62,11 +73,20 @@ private:
 	// Returns the wall that can currently be selected by the mouse
 	Wall* getMouseWallSelection();
 
+	// Returns the checkpoint that can currently be selected by the mouse
+	EditorCheckpoint* getMouseCheckpointSelection();
+
 	// Sets the appropriate values after selecting a new Wall
 	void updateSelectedWall(Wall* newSelection);
 
 	// Sets the appropriate values after selecting a new Checkpoint
-	void updateSelectedCheckpoint(Checkpoint* newSelection);
+	void updateSelectedCheckpoint(EditorCheckpoint* newSelection);
+
+	// Sets all the currently held walls of the checkpoint back to the default thickness
+	void deselectAllCheckpointWalls();
+
+	// Sets all the currently held walls of the checkpoint to the selected thickness
+	void selectAllCheckpointWalls();
 
 	// Creates all the GUI elements for the MainMenu state
 	void openMainMenu();
@@ -76,7 +96,7 @@ private:
 	// Creates all the GUI elements for the Editting state
 	void openEditting();
 	// Updates the startAngle and repositions the timeTrialStart RectangleShape based on the updated startAngle
-	void setStartAngle(float newStartAngle);
+	void setStartAngle(TextFieldResult result);
 
 	// When the newMapButton is clicked: changes the state to editting with a blank map
 	void clickNewMapButton();
@@ -93,14 +113,14 @@ private:
 	// When the editCheckpointToggle is clicked: change into using editting checkpoints mode
 	void toggleEditCheckpointToggle(bool active);
 
-	// When the saveButton is clicked: change the state to saving the map
-	void clickSaveButton();
+	// When the confirmSaveButton is clicked: save the map to a file
+	void saveMap();
 
 	// When the quitButton is clicked: confirm the quit, then go change the state to the main menu
 	void clickQuitButton();
 
-	// When the deleteWallButton is clicked: delete the currently selected wall
-	void clickDeleteWallButton();
+	// When the deleteSelectionButton is clicked: delete the currently selected wall/checkpoint
+	void clickDeleteSelectionButton();
 
 	// Returns the position of the mouse relative to the current camera
 	sf::Vector2i getRelativeMouse();
@@ -130,6 +150,8 @@ private:
 	Toggle* editWallToggle;
 	Toggle* editCheckpointToggle;
 
+	TextField* startAngleInput;
+
 	Button* saveButton;
 	Button* quitButton;
 
@@ -140,7 +162,7 @@ private:
 	TextField* endXInput;
 	TextField* endYInput;
 
-	Button* deleteWallButton;
+	Button* deleteSelectionButton;
 
 	Label* startColorLabel;
 	TextField* startColorR;
@@ -150,6 +172,13 @@ private:
 	TextField* endColorR;
 	TextField* endColorG;
 	TextField* endColorB;
+
+	Label* checkpointIndexLabel;
+
+	ToggleGroup* addOrRemoveWall;
+	Toggle* selectCheckpointToggle;
+	Toggle* addWallToCheckpointToggle;
+	Toggle* removeWallFromCheckpointToggle;
 
 	bool currentlyUsingKart;
 	float xCamera;
@@ -163,10 +192,17 @@ private:
 	sf::Color startColor;
 	sf::Color endColor;
 
-	Checkpoint* currentlySelectedCheckpoint;
+	EditorCheckpoint* currentlySelectedCheckpoint;
+	CheckpointWallMode checkpointWallMode;
+
+	bool isSaveMenuOpen;
+	TextField* saveFileNameInput;
+	Button* cancelSaveButton;
+	Button* confirmSaveButton;
+	char* saveFileName;
 
 	// Map Data
 	float startAngle;
 	std::list<Wall> mapWalls;
-	std::list<Checkpoint> mapCheckpoints;
+	std::list<EditorCheckpoint> mapCheckpoints;
 };

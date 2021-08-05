@@ -29,49 +29,47 @@ int main()
 
     KeyboardInput input;
 
-    Wall wA(500, 600, 1000, 400, 2.0f, sf::Color::Blue, sf::Color::Blue);
+    Wall wA(Line(500, 600, 1000, 400), 2.0f, sf::Color::Blue, sf::Color::Blue);
 
-    Wall wB(200, 600, 900, 50, 2.0f, sf::Color::Red, sf::Color::Yellow);
-    Wall wC(600, 950, 1300, 400, 2.0f, sf::Color::Yellow, sf::Color::Red);
-    Wall wD(900, 50, 1450, 50, 2.0f, sf::Color::Yellow, sf::Color::Green);
-    Wall wE(1450, 50, 1300, 400, 2.0f, sf::Color::Green, sf::Color::Red);
-    Wall wF(600, 950, 50, 950, 2.0f, sf::Color::Yellow, sf::Color::Green);
-    Wall wG(50, 950, 200, 600, 2.0f, sf::Color::Green, sf::Color::Red);
+    Wall wB(Line(200, 600, 900, 50), 2.0f, sf::Color::Red, sf::Color::Yellow);
+    Wall wC(Line(600, 950, 1300, 400), 2.0f, sf::Color::Yellow, sf::Color::Red);
+    Wall wD(Line(900, 50, 1450, 50), 2.0f, sf::Color::Yellow, sf::Color::Green);
+    Wall wE(Line(1450, 50, 1300, 400), 2.0f, sf::Color::Green, sf::Color::Red);
+    Wall wF(Line(600, 950, 50, 950), 2.0f, sf::Color::Yellow, sf::Color::Green);
+    Wall wG(Line(50, 950, 200, 600), 2.0f, sf::Color::Green, sf::Color::Red);
 
-    Wall wH(500, 600, 550, 650, 2.0f, sf::Color::Blue, sf::Color::White);
-    Wall wI(1000, 400, 950, 350, 2.0f, sf::Color::Blue, sf::Color::White);
+    Wall wH(Line(500, 600, 550, 650), 2.0f, sf::Color::Blue, sf::Color::White);
+    Wall wI(Line(1000, 400, 950, 350), 2.0f, sf::Color::Blue, sf::Color::White);
 
-    Wall wJ(550, 650, 450, 750, 2.0f, sf::Color::White, sf::Color::Cyan);
-    Wall wK(950, 350, 1050, 250, 2.0f, sf::Color::White, sf::Color::Cyan);
-    Wall wL(550, 650, 550, 750, 2.0f, sf::Color::White, sf::Color::Cyan);
-    Wall wM(950, 350, 950, 250, 2.0f, sf::Color::White, sf::Color::Cyan);
-    Wall wN(450, 750, 550, 750, 2.0f, sf::Color::Cyan, sf::Color::Cyan);
-    Wall wO(1050, 250, 950, 250, 2.0f, sf::Color::Cyan, sf::Color::Cyan);
+    Wall wJ(Line(550, 650, 450, 750), 2.0f, sf::Color::White, sf::Color::Cyan);
+    Wall wK(Line(950, 350, 1050, 250), 2.0f, sf::Color::White, sf::Color::Cyan);
+    Wall wL(Line(550, 650, 550, 750), 2.0f, sf::Color::White, sf::Color::Cyan);
+    Wall wM(Line(950, 350, 950, 250), 2.0f, sf::Color::White, sf::Color::Cyan);
+    Wall wN(Line(450, 750, 550, 750), 2.0f, sf::Color::Cyan, sf::Color::Cyan);
+    Wall wO(Line(1050, 250, 950, 250), 2.0f, sf::Color::Cyan, sf::Color::Cyan);
 
-    WallGroup raceGroup;
-    raceGroup.count = 15;
-    raceGroup.walls = new Wall*[15];
-    raceGroup.walls[0] = &wA;
-    raceGroup.walls[1] = &wB;
-    raceGroup.walls[2] = &wC;
-    raceGroup.walls[3] = &wD;
-    raceGroup.walls[4] = &wE;
-    raceGroup.walls[5] = &wF;
-    raceGroup.walls[6] = &wG;
-    raceGroup.walls[7] = &wH;
-    raceGroup.walls[8] = &wI;
-    raceGroup.walls[9] = &wJ;
-    raceGroup.walls[10] = &wK;
-    raceGroup.walls[11] = &wL;
-    raceGroup.walls[12] = &wM;
-    raceGroup.walls[13] = &wN;
-    raceGroup.walls[14] = &wO;
+    Wall** raceGroup = new Wall*[15];
+    raceGroup[0] = &wA;
+    raceGroup[1] = &wB;
+    raceGroup[2] = &wC;
+    raceGroup[3] = &wD;
+    raceGroup[4] = &wE;
+    raceGroup[5] = &wF;
+    raceGroup[6] = &wG;
+    raceGroup[7] = &wH;
+    raceGroup[8] = &wI;
+    raceGroup[9] = &wJ;
+    raceGroup[10] = &wK;
+    raceGroup[11] = &wL;
+    raceGroup[12] = &wM;
+    raceGroup[13] = &wN;
+    raceGroup[14] = &wO;
 
     Checkpoint** race = new Checkpoint*[4];
-    race[0] = new Checkpoint(950, 250, 900, 50, &raceGroup);
-    race[1] = new Checkpoint(1050, 250, 1300, 400, &raceGroup);
-    race[2] = new Checkpoint(550, 750, 600, 950, &raceGroup);
-    race[3] = new Checkpoint(450, 750, 200, 600, &raceGroup);
+    race[0] = new Checkpoint(Line(950, 250, 900, 50), raceGroup, 15);
+    race[1] = new Checkpoint(Line(1050, 250, 1300, 400), raceGroup, 15);
+    race[2] = new Checkpoint(Line(550, 750, 600, 950), raceGroup, 15);
+    race[3] = new Checkpoint(Line(450, 750, 200, 600), raceGroup, 15);
 
     Kart kart("Test", &input, sf::Color::Yellow, 550, 550, -40, race, 4);
 
@@ -91,17 +89,19 @@ int main()
             else if (e.type == sf::Event::Resized)
             {
                 window.setView(sf::View(sf::FloatRect(0, 0, e.size.width, e.size.height)));
+                button.resize(e.size.width, e.size.height);
+                tf.resize(e.size.width, e.size.height);
             }
 
-            /*button.handleEvent(window, e);
-            tf.handleEvent(window, e);*/
+            button.handleEvent(window, e);
+            tf.handleEvent(window, e);
         }
 
-        /*kart.tick();
-        kart.update();*/
+        kart.tick();
+        kart.update();
 
         window.clear();
-        /*wA.render(window);
+        wA.render(window);
         wB.render(window);
         wC.render(window);
         wD.render(window);
@@ -118,7 +118,7 @@ int main()
         wO.render(window);
         kart.render(window);
         button.render(window);
-        tf.render(window);*/
+        tf.render(window);
         window.display();
     }
 

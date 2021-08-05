@@ -106,8 +106,6 @@ private:
 	void doCollisions();
 	// Checks for passing checkpoints in order to progress in the race and 
 	void doCheckpoints(float xPositionBefore, float yPositionBefore);
-	// Returns true if the lines intersect, also updates the output x and output y variables with the intersection point
-	bool getLineSegmentIntersection(float kx1, float ky1, float kx2, float ky2, float wx1, float wy1, float wx2, float wy2, float* ox, float* oy, float* onx, float* ony, float* otime);
 
 	sf::RectangleShape body;
 	sf::RectangleShape wheel;
