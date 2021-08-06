@@ -69,6 +69,12 @@ public:
 	// Resets the position and angle of the kart to the given values, also sets velocities to 0
 	void resetPosition(float newXPosition, float newYPosition, float newAngle);
 
+	// Returns the current lap number
+	int getLapNumber() { return lapNumber; }
+
+	// Returns a number from 0-1 representing the percentage of the current lap completed
+	float getLapProgress();
+
 private:
 	const sf::Color WHEEL_COLOR = sf::Color(100, 100, 100, 255);
 	const sf::Color DRIFTING_WHEEL_COLOR = sf::Color(170, 170, 170, 255); // this is kind of a temporary solution to indicate drifting, ideally it would be shown with skidmarks or something

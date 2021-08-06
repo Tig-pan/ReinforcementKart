@@ -3,6 +3,9 @@
 Game::Game(std::string mapFileName, Input* input, sf::RenderWindow& window, sf::Font& font)
 	: window(window)
 	, font(font)
+
+	, lapLabel(LabelAlign::RightTop, "", 32, font, Transform(-10, -10, 10, 10, 1.0f, 1.0f, 0.0f, 0.0f), window)
+	, lapProgressLabel(LabelAlign::RightTop, "", 24, font, Transform(-10, -10, 50, 50, 1.0f, 1.0f, 0.0f, 0.0f), window)
 {
 	// Load map
 	std::ifstream mapFile;
@@ -104,6 +107,8 @@ void Game::run()
 			window.getSize().x,
 			window.getSize().y));
 
+		updateGUI();
+
 		window.clear();
 		window.setView(gameView);
 		for (int i = 0; i < wallCount; i++)
@@ -111,6 +116,19 @@ void Game::run()
 			walls[i]->render(window);
 		}
 		kart->render(window);
+
+		window.setView(guiView);
+		lapLabel.render(window);
+		lapProgressLabel.render(window);
+
 		window.display();
 	}
+}
+
+void Game::updateGUI()
+{
+	lapLabel.setText("Lap: " + std::to_string(kart->getLapNumber() + 1), window);
+	std::ostringstream ss; // have to use string stream because its the only way that formats properly
+	ss << std::floor(kart->getLapProgress() * 100.0f) << "%";
+	lapProgressLabel.setText(ss.str(), window);
 }

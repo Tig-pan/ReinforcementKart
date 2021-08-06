@@ -51,7 +51,7 @@ public:
 	{
 		for (auto it = walls.begin(); it != walls.end(); it++)
 		{
-			if (&*it == &remove)
+			if (*it == remove)
 			{
 				walls.erase(it);
 				return true;

@@ -4,6 +4,7 @@
 
 #include <string>
 #include <fstream>
+#include <sstream>
 
 #include "input.h"
 #include "wall.h"
@@ -28,6 +29,9 @@ public:
 	void run();
 
 private:
+	// Updates the gui with new info
+	void updateGUI();
+
 	sf::RenderWindow& window;
 	sf::Font& font;
 
@@ -36,6 +40,9 @@ private:
 
 	Kart* kart;
 	Input* input;
+
+	Label lapLabel;
+	Label lapProgressLabel;
 
 	float startAngle;
 	int wallCount;

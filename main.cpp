@@ -1,15 +1,5 @@
 #include "main.h"
 
-void print()
-{
-    std::cout << "aa\n";
-}
-
-void printTextField(TextFieldResult t)
-{
-    std::cout << t.floatResult << "\n";
-}
-
 int main()
 {
     bool editMode = false;

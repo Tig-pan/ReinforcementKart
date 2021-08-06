@@ -29,6 +29,11 @@ void Editor::run()
                 {
                 case EditorState::MainMenu:
                     newMapButton->resize(e.size.width, e.size.height);
+                    loadMapButton->resize(e.size.width, e.size.height);
+
+                    loadFileNameInput->resize(e.size.width, e.size.height);
+                    cancelLoadButton->resize(e.size.width, e.size.height);
+                    confirmLoadButton->resize(e.size.width, e.size.height);
                     break;
                 case EditorState::Editting:
                     resetPositionButton->resize(e.size.width, e.size.height);
@@ -79,7 +84,17 @@ void Editor::run()
             switch (state)
             {
             case EditorState::MainMenu:
-                newMapButton->handleEvent(window, e);
+                if (isLoadMenuOpen)
+                {
+                    loadFileNameInput->handleEvent(window, e);
+                    cancelLoadButton->handleEvent(window, e);
+                    confirmLoadButton->handleEvent(window, e);
+                }
+                else
+                {
+                    newMapButton->handleEvent(window, e);
+                    loadMapButton->handleEvent(window, e);
+                }
                 break;
             case EditorState::Editting:
                 if (isSaveMenuOpen)
@@ -190,6 +205,14 @@ void Editor::run()
         {
         case EditorState::MainMenu:
             newMapButton->render(window);
+            loadMapButton->render(window);
+
+            if (isLoadMenuOpen)
+            {
+                loadFileNameInput->render(window);
+                cancelLoadButton->render(window);
+                confirmLoadButton->render(window);
+            }
             break;
         case EditorState::Editting:
             // Render the actual world stuff first
@@ -299,6 +322,12 @@ void Editor::handleSelectionEvent(sf::Event& e)
             {
                 // otherwise delete the wall under the current mouse selection
                 Wall* toDelete = getMouseWallSelection();
+
+                // removes that wall from the groupings of the checkpoints
+                for (auto it = mapCheckpoints.begin(); it != mapCheckpoints.end(); it++)
+                {
+                    (*it).removeWall(toDelete);
+                }
 
                 for (auto it = mapWalls.begin(); it != mapWalls.end(); it++)
                 {
@@ -538,7 +567,21 @@ void Editor::selectAllCheckpointWalls()
 
 void Editor::openMainMenu()
 {
-	newMapButton = new Button([this]() { clickNewMapButton(); }, "New Blank Map", 32, font, Transform(0, 0, 0, 0, 0.3f, 0.7f, 0.2f, 0.35f), window);
+    isLoadMenuOpen = false;
+
+	newMapButton = new Button([this]() { clickNewMapButton(); },
+        "New Blank Map", 32, font, Transform(0, 0, 0, 0, 0.3f, 0.7f, 0.2f, 0.35f), window);
+    loadMapButton = new Button([this]() { isLoadMenuOpen = true; },
+        "Load Map", 32, font, Transform(0, 0, 0, 0, 0.3f, 0.7f, 0.65f, 0.8f), window);
+
+    loadFileNameInput = new TextField(TextFieldType::Text,
+        [this](TextFieldResult result) { loadFileName = result.textResult; },
+        "Load File Name:", "load-file.map", 18, font,
+        Transform(-110, 110, -15, 15, 0.5f, 0.5f, 0.5f, 0.5f), window);
+    cancelLoadButton = new Button([this]() { isLoadMenuOpen = false; }, "Cancel", 18, font,
+        Transform(-195, -120, -15, 15, 0.5f, 0.5f, 0.5f, 0.5f), window);
+    confirmLoadButton = new Button([this]() { loadMap(); }, "Confirm", 18, font,
+        Transform(120, 195, -15, 15, 0.5f, 0.5f, 0.5f, 0.5f), window);
 }
 
 void Editor::closeMainMenu()
@@ -722,6 +765,88 @@ void Editor::clickNewMapButton()
     openEditting();
 }
 
+void Editor::loadMap()
+{
+    clickNewMapButton(); // simulates opening up a blank map
+
+    // Start Load file
+    std::ifstream mapFile;
+    mapFile.open(loadFileName, std::ios::in | std::ios::binary);
+
+    mapFile.read((char*)&startAngle, sizeof(startAngle));
+    timeTrialStart->setRotation(startAngle);
+
+    editorKart->resetPosition(0.0f, 0.0f, startAngle);
+
+    int wallCount;
+    mapFile.read((char*)&wallCount, sizeof(wallCount));
+
+    float x1;
+    float y1;
+    float x2;
+    float y2;
+    uint8_t r1;
+    uint8_t g1;
+    uint8_t b1;
+    uint8_t r2;
+    uint8_t g2;
+    uint8_t b2;
+
+    for (int i = 0; i < wallCount; i++)
+    {
+        mapFile.read((char*)&x1, sizeof(x1));
+        mapFile.read((char*)&y1, sizeof(y1));
+        mapFile.read((char*)&x2, sizeof(x2));
+        mapFile.read((char*)&y2, sizeof(y2));
+
+        mapFile.read((char*)&r1, sizeof(r1));
+        mapFile.read((char*)&g1, sizeof(g1));
+        mapFile.read((char*)&b1, sizeof(b1));
+
+        mapFile.read((char*)&r2, sizeof(r2));
+        mapFile.read((char*)&g2, sizeof(g2));
+        mapFile.read((char*)&b2, sizeof(b2));
+
+        mapWalls.push_back(Wall(Line(x1, y1, x2, y2), DEFAULT_WALL_THICKNESS, sf::Color(r1, g1, b1), sf::Color(r2, g2, b2)));
+    }
+
+    int checkpointCount;
+    mapFile.read((char*)&checkpointCount, sizeof(checkpointCount));
+
+    int wallsInGroup;
+    EditorCheckpoint* last;
+
+    for (int i = 0; i < checkpointCount; i++)
+    {
+        mapFile.read((char*)&x1, sizeof(x1));
+        mapFile.read((char*)&y1, sizeof(y1));
+        mapFile.read((char*)&x2, sizeof(x2));
+        mapFile.read((char*)&y2, sizeof(y2));
+
+        mapCheckpoints.push_back(EditorCheckpoint(Line(x1, y1, x2, y2)));
+        last = &*(--mapCheckpoints.end());
+
+        mapFile.read((char*)&wallsInGroup, sizeof(wallsInGroup));
+
+        for (int j = 0; j < wallsInGroup; j++)
+        {
+            int thisIndex;
+            mapFile.read((char*)&thisIndex, sizeof(thisIndex));
+
+            int index = 0;
+            for (auto it = mapWalls.begin(); it != mapWalls.end(); it++, index++)
+            {
+                if (thisIndex == index)
+                {
+                    last->addWall(&*it);
+                    break;
+                }
+            }
+        }
+    }
+    // Done loading map
+}
+
 void Editor::clickResetPositionButton()
 {
     if (currentlyUsingKart)
@@ -777,7 +902,7 @@ void Editor::saveMap()
     float temp;
 
     std::ofstream output;
-    output.open(saveFileName, std::ios::out | std::ios::binary);
+    output.open(saveFileName, std::ios::out | std::ios::trunc | std::ios::binary);
 
     output.write((char*)&startAngle, sizeof(startAngle));
 
@@ -848,7 +973,7 @@ void Editor::saveMap()
 
 void Editor::clickQuitButton()
 {
-    // TODO
+    window.close();
 }
 
 void Editor::clickDeleteSelectionButton()
@@ -856,6 +981,13 @@ void Editor::clickDeleteSelectionButton()
     if (currentlySelectedWall != nullptr)
     {
         Wall* toDelete = currentlySelectedWall;
+
+        // removes that wall from the groupings of the checkpoints
+        for (auto it = mapCheckpoints.begin(); it != mapCheckpoints.end(); it++)
+        {
+            (*it).removeWall(toDelete);
+        }
+
         updateSelectedWall(nullptr);
 
         for (auto it = mapWalls.begin(); it != mapWalls.end(); it++)

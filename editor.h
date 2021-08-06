@@ -100,6 +100,9 @@ private:
 	// When the newMapButton is clicked: changes the state to editting with a blank map
 	void clickNewMapButton();
 
+	// When the confirmLoadButton is clicked: open the editor and load the map from the file
+	void loadMap();
+
 	// When the resetPositionButton is clicked: set the position of the editting view/editorKart to be at 0,0
 	void clickResetPositionButton();
 
@@ -133,6 +136,13 @@ private:
 
 	// MainMenu
 	Button* newMapButton;
+	Button* loadMapButton;
+
+	bool isLoadMenuOpen;
+	TextField* loadFileNameInput;
+	Button* cancelLoadButton;
+	Button* confirmLoadButton;
+	char* loadFileName;
 
 	// Editting
 	sf::RectangleShape* timeTrialStart;

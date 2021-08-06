@@ -154,6 +154,11 @@ void Kart::resetPosition(float newXPosition, float newYPosition, float newAngle)
 	kartSpin = 0.0f;
 }
 
+float Kart::getLapProgress()
+{
+	return ((float)furthestCheckpoint + checkpointProgress) / (float)checkpointCount;
+}
+
 float Kart::getAngleBetween(float vectorX, float vectorY, float usedAngle)
 {
 	const float vectorMagnitude = sqrtf(vectorX * vectorX + vectorY * vectorY);
