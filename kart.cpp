@@ -279,9 +279,9 @@ void Kart::doCollisions()
 		float yNormal;
 		float time = 2.0f;
 
-		for (int i = 0; i < race[currentCheckpoint]->getWallsInGroup(); i++)
+		for (int i = 0; i < race[currentCheckpoint]->getWallsInCollisionGroup(); i++)
 		{
-			Wall* wall = race[currentCheckpoint]->getWallGroup()[i];
+			Wall* wall = race[currentCheckpoint]->getCollisionWallGroup()[i];
 
 			if (Line::getLineSegmentIntersection(Line(beforeFLX, beforeFLY, afterFLX, afterFLY),
 				wall->getLine(), &xIntersect, &yIntersect, &xNormal, &yNormal, &time))

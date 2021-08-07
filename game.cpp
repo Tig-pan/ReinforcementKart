@@ -50,7 +50,8 @@ Game::Game(std::string mapFileName, Input* input, sf::RenderWindow& window, sf::
 
 	checkpoints = new Checkpoint*[checkpointCount];
 
-	int wallsInGroup;
+	int wallsInCollisionGroup;
+	int wallsInVisionGroup;
 	int index;
 
 	for (int i = 0; i < checkpointCount; i++)
@@ -60,17 +61,29 @@ Game::Game(std::string mapFileName, Input* input, sf::RenderWindow& window, sf::
 		mapFile.read((char*)&x2, sizeof(x2));
 		mapFile.read((char*)&y2, sizeof(y2));
 
-		mapFile.read((char*)&wallsInGroup, sizeof(wallsInGroup));
+		// Collision group
+		mapFile.read((char*)&wallsInCollisionGroup, sizeof(wallsInCollisionGroup));
 
-		Wall** wallGrouping = new Wall*[wallsInGroup];
+		Wall** collisionWallGrouping = new Wall*[wallsInCollisionGroup];
 
-		for (int j = 0; j < wallsInGroup; j++)
+		for (int j = 0; j < wallsInCollisionGroup; j++)
 		{
 			mapFile.read((char*)&index, sizeof(index));
-			wallGrouping[j] = walls[index];
+			collisionWallGrouping[j] = walls[index];
 		}
 
-		checkpoints[i] = new Checkpoint(Line(x1, y1, x2, y2), wallGrouping, wallsInGroup);
+		// Vision group
+		mapFile.read((char*)&wallsInVisionGroup, sizeof(wallsInVisionGroup));
+
+		Wall** visionWallGrouping = new Wall*[wallsInVisionGroup];
+
+		for (int j = 0; j < wallsInVisionGroup; j++)
+		{
+			mapFile.read((char*)&index, sizeof(index));
+			visionWallGrouping[j] = walls[index];
+		}
+
+		checkpoints[i] = new Checkpoint(Line(x1, y1, x2, y2), collisionWallGrouping, wallsInCollisionGroup, visionWallGrouping, wallsInVisionGroup);
 	}
 	// Done loading map
 

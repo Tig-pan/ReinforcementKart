@@ -11,11 +11,14 @@ optimizing the Walls.
 class Checkpoint
 {
 public:
-	Checkpoint(Line line, Wall** wallGrouping, int wallsInGroup)
-		: line(line), wallGrouping(wallGrouping), wallsInGroup(wallsInGroup) {}
+	Checkpoint(Line line, Wall** collisionWallGrouping, int wallsInCollisionGroup, Wall** visionWallGrouping, int wallsInVisionGroup)
+		: line(line), collisionWallGrouping(collisionWallGrouping), wallsInCollisionGroup(wallsInCollisionGroup), visionWallGrouping(visionWallGrouping), wallsInVisionGroup(wallsInVisionGroup) {}
 
-	Wall** getWallGroup() { return wallGrouping; }
-	int getWallsInGroup() { return wallsInGroup; }
+	Wall** getCollisionWallGroup() { return collisionWallGrouping; }
+	int getWallsInCollisionGroup() { return wallsInCollisionGroup; }
+
+	Wall** getVisionWallGroup() { return collisionWallGrouping; }
+	int getWallsInVisionGroup() { return wallsInCollisionGroup; }
 
 	void setX1(TextFieldResult result) { line.x1 = result.floatResult; }
 	void setY1(TextFieldResult result) { line.y1 = result.floatResult; }
@@ -24,8 +27,11 @@ public:
 
 	Line getLine() { return line; }
 private:
-	Wall** wallGrouping;
-	int wallsInGroup;
+	Wall** collisionWallGrouping;
+	int wallsInCollisionGroup;
+
+	Wall** visionWallGrouping;
+	int wallsInVisionGroup;
 
 	Line line;
 };
@@ -39,30 +45,62 @@ public:
 	EditorCheckpoint(Line line)
 		: line(line) {}
 
-	std::list<Wall*>& getWalls() { return walls; }
+	std::list<Wall*>& getCollisionWalls() { return collisionWalls; }
+	std::list<Wall*>& getVisionWalls() { return visionWalls; }
 
-	void addWall(Wall* add)
+	void addCollisionWall(Wall* add)
 	{
-		walls.push_back(add);
+		collisionWalls.push_back(add);
 	}
 
 	// Returns true if the wall was removed from the list, false if it couldn't be found
-	bool removeWall(Wall* remove)
+	bool removeCollisionWall(Wall* remove)
 	{
-		for (auto it = walls.begin(); it != walls.end(); it++)
+		for (auto it = collisionWalls.begin(); it != collisionWalls.end(); it++)
 		{
 			if (*it == remove)
 			{
-				walls.erase(it);
+				collisionWalls.erase(it);
 				return true;
 			}
 		}
 		return false;
 	}
 
-	bool containsWall(Wall* contains)
+	bool containsCollisionWall(Wall* contains)
 	{
-		for (auto it = walls.begin(); it != walls.end(); it++)
+		for (auto it = collisionWalls.begin(); it != collisionWalls.end(); it++)
+		{
+			if (*it == contains)
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+
+	void addVisionWall(Wall* add)
+	{
+		visionWalls.push_back(add);
+	}
+
+	// Returns true if the wall was removed from the list, false if it couldn't be found
+	bool removeVisionWall(Wall* remove)
+	{
+		for (auto it = visionWalls.begin(); it != visionWalls.end(); it++)
+		{
+			if (*it == remove)
+			{
+				visionWalls.erase(it);
+				return true;
+			}
+		}
+		return false;
+	}
+
+	bool containsVisionWall(Wall* contains)
+	{
+		for (auto it = visionWalls.begin(); it != visionWalls.end(); it++)
 		{
 			if (*it == contains)
 			{
@@ -79,7 +117,8 @@ public:
 
 	Line getLine() { return line; }
 private:
-	std::list<Wall*> walls;
+	std::list<Wall*> collisionWalls;
+	std::list<Wall*> visionWalls;
 
 	Line line;
 };

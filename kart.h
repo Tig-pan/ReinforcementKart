@@ -75,6 +75,12 @@ public:
 	// Returns a number from 0-1 representing the percentage of the current lap completed
 	float getLapProgress();
 
+	// Returns the vision group of walls for the current checkpoint
+	Wall** getVisionCheckpointGroup() { return race[currentCheckpoint]->getVisionWallGroup(); }
+
+	// Returns the amount of walls in the vision group for the current checkpoint
+	int getVisionCheckpointGroupSize() { return race[currentCheckpoint]->getWallsInVisionGroup(); }
+
 private:
 	const sf::Color WHEEL_COLOR = sf::Color(100, 100, 100, 255);
 	const sf::Color DRIFTING_WHEEL_COLOR = sf::Color(170, 170, 170, 255); // this is kind of a temporary solution to indicate drifting, ideally it would be shown with skidmarks or something

@@ -44,8 +44,10 @@ An enum that dictates if you can currently add or remove walls from a checkpoint
 enum class CheckpointWallMode
 {
 	SelectCheckpoint,
-	Add,
-	Remove
+	AddCollision,
+	RemoveCollision,
+	AddVision,
+	RemoveVision
 };
 
 /*
@@ -186,8 +188,10 @@ private:
 
 	ToggleGroup* addOrRemoveWall;
 	Toggle* selectCheckpointToggle;
-	Toggle* addWallToCheckpointToggle;
-	Toggle* removeWallFromCheckpointToggle;
+	Toggle* addCollisionWallToCheckpointToggle;
+	Toggle* removeCollisionWallFromCheckpointToggle;
+	Toggle* addVisionWallToCheckpointToggle;
+	Toggle* removeVisionWallFromCheckpointToggle;
 
 	bool currentlyUsingKart;
 	float xCamera;

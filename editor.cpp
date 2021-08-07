@@ -70,8 +70,10 @@ void Editor::run()
                     checkpointIndexLabel->resize(e.size.width, e.size.height);
 
                     selectCheckpointToggle->resize(e.size.width, e.size.height);
-                    addWallToCheckpointToggle->resize(e.size.width, e.size.height);
-                    removeWallFromCheckpointToggle->resize(e.size.width, e.size.height);
+                    addCollisionWallToCheckpointToggle->resize(e.size.width, e.size.height);
+                    removeCollisionWallFromCheckpointToggle->resize(e.size.width, e.size.height);
+                    addVisionWallToCheckpointToggle->resize(e.size.width, e.size.height);
+                    removeVisionWallFromCheckpointToggle->resize(e.size.width, e.size.height);
 
                     saveFileNameInput->resize(e.size.width, e.size.height);
                     cancelSaveButton->resize(e.size.width, e.size.height);
@@ -139,8 +141,10 @@ void Editor::run()
                     else
                     {
                         clickedOnGuiElement |= selectCheckpointToggle->handleEvent(window, e);
-                        clickedOnGuiElement |= addWallToCheckpointToggle->handleEvent(window, e);
-                        clickedOnGuiElement |= removeWallFromCheckpointToggle->handleEvent(window, e);
+                        clickedOnGuiElement |= addCollisionWallToCheckpointToggle->handleEvent(window, e);
+                        clickedOnGuiElement |= removeCollisionWallFromCheckpointToggle->handleEvent(window, e);
+                        clickedOnGuiElement |= addVisionWallToCheckpointToggle->handleEvent(window, e);
+                        clickedOnGuiElement |= removeVisionWallFromCheckpointToggle->handleEvent(window, e);
                     }
 
                     if (!clickedOnGuiElement)
@@ -273,8 +277,10 @@ void Editor::run()
             else
             {
                 selectCheckpointToggle->render(window);
-                addWallToCheckpointToggle->render(window);
-                removeWallFromCheckpointToggle->render(window);
+                addCollisionWallToCheckpointToggle->render(window);
+                removeCollisionWallFromCheckpointToggle->render(window);
+                addVisionWallToCheckpointToggle->render(window);
+                removeVisionWallFromCheckpointToggle->render(window);
             }
 
             if (isSaveMenuOpen)
@@ -326,7 +332,8 @@ void Editor::handleSelectionEvent(sf::Event& e)
                 // removes that wall from the groupings of the checkpoints
                 for (auto it = mapCheckpoints.begin(); it != mapCheckpoints.end(); it++)
                 {
-                    (*it).removeWall(toDelete);
+                    (*it).removeCollisionWall(toDelete);
+                    (*it).removeVisionWall(toDelete);
                 }
 
                 for (auto it = mapWalls.begin(); it != mapWalls.end(); it++)
@@ -352,21 +359,35 @@ void Editor::handleSelectionEvent(sf::Event& e)
         else if (sf::Mouse::isButtonPressed(sf::Mouse::Button::Left) && currentlySelectedCheckpoint != nullptr)
         {
             // these perform the adding and removing from the checkpoints group
-            if (checkpointWallMode == CheckpointWallMode::Add)
+            Wall* w = getMouseWallSelection();
+            if (checkpointWallMode == CheckpointWallMode::AddCollision)
             {
-                Wall* add = getMouseWallSelection();
-                if (add != nullptr && !currentlySelectedCheckpoint->containsWall(add))
+                if (w != nullptr && !currentlySelectedCheckpoint->containsCollisionWall(w))
                 {
-                    currentlySelectedCheckpoint->addWall(add);
-                    add->setThickness(SELECTED_WALL_THICKNESS);
+                    currentlySelectedCheckpoint->addCollisionWall(w);
+                    w->setThickness(SELECTED_WALL_THICKNESS);
                 }
             }
-            else if (checkpointWallMode == CheckpointWallMode::Remove)
+            else if (checkpointWallMode == CheckpointWallMode::RemoveCollision)
             {
-                Wall* remove = getMouseWallSelection();
-                if (remove != nullptr && !currentlySelectedCheckpoint->removeWall(remove))
+                if (w != nullptr && !currentlySelectedCheckpoint->removeCollisionWall(w))
                 {
-                    remove->setThickness(DEFAULT_WALL_THICKNESS);
+                    w->setThickness(DEFAULT_WALL_THICKNESS);
+                }
+            }
+            else if (checkpointWallMode == CheckpointWallMode::AddVision)
+            {
+                if (w != nullptr && !currentlySelectedCheckpoint->containsVisionWall(w))
+                {
+                    currentlySelectedCheckpoint->addVisionWall(w);
+                    w->setThickness(SELECTED_WALL_THICKNESS);
+                }
+            }
+            else if (checkpointWallMode == CheckpointWallMode::RemoveVision)
+            {
+                if (w != nullptr && !currentlySelectedCheckpoint->removeVisionWall(w))
+                {
+                    w->setThickness(DEFAULT_WALL_THICKNESS);
                 }
             }
         }
@@ -551,17 +572,37 @@ void Editor::updateSelectedCheckpoint(EditorCheckpoint* newSelection)
 
 void Editor::deselectAllCheckpointWalls()
 {
-    for (auto it = currentlySelectedCheckpoint->getWalls().begin(); it != currentlySelectedCheckpoint->getWalls().end(); it++)
+    if (checkpointWallMode == CheckpointWallMode::AddCollision || checkpointWallMode == CheckpointWallMode::RemoveCollision)
     {
-        (*it)->setThickness(DEFAULT_WALL_THICKNESS);
+        for (auto it = currentlySelectedCheckpoint->getCollisionWalls().begin(); it != currentlySelectedCheckpoint->getCollisionWalls().end(); it++)
+        {
+            (*it)->setThickness(DEFAULT_WALL_THICKNESS);
+        }
+    }
+    else if (checkpointWallMode == CheckpointWallMode::AddVision || checkpointWallMode == CheckpointWallMode::RemoveVision)
+    {
+        for (auto it = currentlySelectedCheckpoint->getVisionWalls().begin(); it != currentlySelectedCheckpoint->getVisionWalls().end(); it++)
+        {
+            (*it)->setThickness(DEFAULT_WALL_THICKNESS);
+        }
     }
 }
 
 void Editor::selectAllCheckpointWalls()
 {
-    for (auto it = currentlySelectedCheckpoint->getWalls().begin(); it != currentlySelectedCheckpoint->getWalls().end(); it++)
+    if (checkpointWallMode == CheckpointWallMode::AddCollision || checkpointWallMode == CheckpointWallMode::RemoveCollision)
     {
-        (*it)->setThickness(SELECTED_WALL_THICKNESS);
+        for (auto it = currentlySelectedCheckpoint->getCollisionWalls().begin(); it != currentlySelectedCheckpoint->getCollisionWalls().end(); it++)
+        {
+            (*it)->setThickness(SELECTED_WALL_THICKNESS);
+        }
+    }
+    else if (checkpointWallMode == CheckpointWallMode::AddVision || checkpointWallMode == CheckpointWallMode::RemoveVision)
+    {
+        for (auto it = currentlySelectedCheckpoint->getVisionWalls().begin(); it != currentlySelectedCheckpoint->getVisionWalls().end(); it++)
+        {
+            (*it)->setThickness(SELECTED_WALL_THICKNESS);
+        }
     }
 }
 
@@ -727,19 +768,42 @@ void Editor::openEditting()
     checkpointIndexLabel = new Label(LabelAlign::LeftMiddle, "", 16, font,
         Transform(0, 0, -30, -5, 0.5f, 0.5f, 1.0f, 1.0f), window);
 
-    addOrRemoveWall = new ToggleGroup(3);
-    selectCheckpointToggle = new Toggle([this](bool result) { checkpointWallMode = CheckpointWallMode::SelectCheckpoint; },
+    addOrRemoveWall = new ToggleGroup(5);
+    selectCheckpointToggle = new Toggle([this](bool result) { 
+            if (currentlySelectedCheckpoint != nullptr) { deselectAllCheckpointWalls(); }
+            checkpointWallMode = CheckpointWallMode::SelectCheckpoint; 
+            if (currentlySelectedCheckpoint != nullptr) { selectAllCheckpointWalls(); }},
         addOrRemoveWall, true, LabelAlign::LeftMiddle, "Select Checkpoint", 16, font,
+        Transform(-30, -5, -170, -145, 1.0f, 1.0f, 1.0f, 1.0f), window);
+    addCollisionWallToCheckpointToggle = new Toggle([this](bool result) { 
+            if (currentlySelectedCheckpoint != nullptr) { deselectAllCheckpointWalls(); }
+            checkpointWallMode = CheckpointWallMode::AddCollision; 
+            if (currentlySelectedCheckpoint != nullptr) { selectAllCheckpointWalls(); }},
+        addOrRemoveWall, false, LabelAlign::LeftMiddle, "Add Collision Wall", 16, font,
+        Transform(-30, -5, -135, -110, 1.0f, 1.0f, 1.0f, 1.0f), window);
+    removeCollisionWallFromCheckpointToggle = new Toggle([this](bool result) { 
+            if (currentlySelectedCheckpoint != nullptr) { deselectAllCheckpointWalls(); }
+            checkpointWallMode = CheckpointWallMode::RemoveCollision; 
+            if (currentlySelectedCheckpoint != nullptr) { selectAllCheckpointWalls(); }},
+        addOrRemoveWall, false, LabelAlign::LeftMiddle, "Remove Collision Wall", 16, font,
         Transform(-30, -5, -100, -75, 1.0f, 1.0f, 1.0f, 1.0f), window);
-    addWallToCheckpointToggle = new Toggle([this](bool result) { checkpointWallMode = CheckpointWallMode::Add; },
-        addOrRemoveWall, false, LabelAlign::LeftMiddle, "Add Wall", 16, font,
+    addVisionWallToCheckpointToggle = new Toggle([this](bool result) {
+            if (currentlySelectedCheckpoint != nullptr) { deselectAllCheckpointWalls(); }
+            checkpointWallMode = CheckpointWallMode::AddVision;
+            if (currentlySelectedCheckpoint != nullptr) { selectAllCheckpointWalls(); }},
+        addOrRemoveWall, false, LabelAlign::LeftMiddle, "Add Vision Wall", 16, font,
         Transform(-30, -5, -65, -40, 1.0f, 1.0f, 1.0f, 1.0f), window);
-    removeWallFromCheckpointToggle = new Toggle([this](bool result) { checkpointWallMode = CheckpointWallMode::Remove; },
-        addOrRemoveWall, false, LabelAlign::LeftMiddle, "Remove Wall", 16, font,
+    removeVisionWallFromCheckpointToggle = new Toggle([this](bool result) {
+            if (currentlySelectedCheckpoint != nullptr) { deselectAllCheckpointWalls(); }
+            checkpointWallMode = CheckpointWallMode::RemoveVision;
+            if (currentlySelectedCheckpoint != nullptr) { selectAllCheckpointWalls(); }},
+        addOrRemoveWall, false, LabelAlign::LeftMiddle, "Remove Vision Wall", 16, font,
         Transform(-30, -5, -30, -5, 1.0f, 1.0f, 1.0f, 1.0f), window);
     addOrRemoveWall->setToggle(0, selectCheckpointToggle);
-    addOrRemoveWall->setToggle(1, addWallToCheckpointToggle);
-    addOrRemoveWall->setToggle(2, removeWallFromCheckpointToggle);
+    addOrRemoveWall->setToggle(1, addCollisionWallToCheckpointToggle);
+    addOrRemoveWall->setToggle(2, removeCollisionWallFromCheckpointToggle);
+    addOrRemoveWall->setToggle(3, addVisionWallToCheckpointToggle);
+    addOrRemoveWall->setToggle(4, removeVisionWallFromCheckpointToggle);
 
     saveFileNameInput = new TextField(TextFieldType::Text,
         [this](TextFieldResult result) { saveFileName = result.textResult; },
@@ -826,6 +890,7 @@ void Editor::loadMap()
         mapCheckpoints.push_back(EditorCheckpoint(Line(x1, y1, x2, y2)));
         last = &*(--mapCheckpoints.end());
 
+        // Collision Group
         mapFile.read((char*)&wallsInGroup, sizeof(wallsInGroup));
 
         for (int j = 0; j < wallsInGroup; j++)
@@ -838,7 +903,26 @@ void Editor::loadMap()
             {
                 if (thisIndex == index)
                 {
-                    last->addWall(&*it);
+                    last->addCollisionWall(&*it);
+                    break;
+                }
+            }
+        }
+
+        // Vision Group
+        mapFile.read((char*)&wallsInGroup, sizeof(wallsInGroup));
+
+        for (int j = 0; j < wallsInGroup; j++)
+        {
+            int thisIndex;
+            mapFile.read((char*)&thisIndex, sizeof(thisIndex));
+
+            int index = 0;
+            for (auto it = mapWalls.begin(); it != mapWalls.end(); it++, index++)
+            {
+                if (thisIndex == index)
+                {
+                    last->addVisionWall(&*it);
                     break;
                 }
             }
@@ -895,7 +979,7 @@ void Editor::saveMap()
     * number of walls
     * (x1, y1, x2, y2, startColorR, startColorG, startColorB, endColorR, endColorG, endColorB) * number of walls
     * number of checkpoints
-    * (x1, y1, x2, y2, number of walls in checkpoint group, (wall index) * number of walls in checkpoint group) * number of checkpoints
+    * (x1, y1, x2, y2, number of walls in checkpoint group, (wall index) * number of walls in collision checkpoint group,  (wall index) * number of walls in vision checkpoint group) * number of checkpoints
     */
 
     uint8_t colorTemp;
@@ -949,10 +1033,26 @@ void Editor::saveMap()
         temp = (*it).getLine().y2;
         output.write((char*)&temp, sizeof(temp));
 
-        number = (*it).getWalls().size();
+        number = (*it).getCollisionWalls().size();
         output.write((char*)&number, sizeof(number));
 
-        for (auto jt = (*it).getWalls().begin(); jt != (*it).getWalls().end(); jt++)
+        for (auto jt = (*it).getCollisionWalls().begin(); jt != (*it).getCollisionWalls().end(); jt++)
+        {
+            int index = 0;
+            for (auto kt = mapWalls.begin(); kt != mapWalls.end(); kt++, index++)
+            {
+                if (&*kt == *jt)
+                {
+                    output.write((char*)&index, sizeof(index));
+                    break;
+                }
+            }
+        }
+
+        number = (*it).getVisionWalls().size();
+        output.write((char*)&number, sizeof(number));
+
+        for (auto jt = (*it).getVisionWalls().begin(); jt != (*it).getVisionWalls().end(); jt++)
         {
             int index = 0;
             for (auto kt = mapWalls.begin(); kt != mapWalls.end(); kt++, index++)
@@ -985,7 +1085,8 @@ void Editor::clickDeleteSelectionButton()
         // removes that wall from the groupings of the checkpoints
         for (auto it = mapCheckpoints.begin(); it != mapCheckpoints.end(); it++)
         {
-            (*it).removeWall(toDelete);
+            (*it).removeCollisionWall(toDelete);
+            (*it).removeVisionWall(toDelete);
         }
 
         updateSelectedWall(nullptr);
