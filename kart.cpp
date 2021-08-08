@@ -1,10 +1,11 @@
 #include "kart.h"
 
-Kart::Kart(std::string racerName, Input* input, sf::Color kartColor, float startX, float startY, float startAngle, Checkpoint** race, int checkpointCount)
+Kart::Kart(std::string racerName, Input* input, KartSensors* sensors, sf::Color kartColor, float startX, float startY, float startAngle, Checkpoint** race, int checkpointCount)
 	: body(sf::Vector2f(KART_LENGTH, KART_WIDTH)) // the x component is the length, and the y is width. this is because the angle 0 is straight to the right
 	, wheel(sf::Vector2f(KART_WHEEL_LENGTH, KART_WHEEL_WIDTH))
 
 	, input(input)
+	, sensors(sensors)
 	, race(race)
 
 	, checkpointCount(checkpointCount)
@@ -37,6 +38,11 @@ void Kart::tick()
 {
 	/* This physics is incredibly preliminary, this will be hugely updated in the future, it is only currently included
 	as a base line to use for experimenting with other features (i.e. map collision) */
+	
+	if (sensors != nullptr)
+	{
+		sensors->tick(xPosition, yPosition, angle, race[(currentCheckpoint + 1) % checkpointCount]->getLine(), race[currentCheckpoint]->getVisionWallGroup(), race[currentCheckpoint]->getWallsInVisionGroup());
+	}
 
 	input->update();
 
@@ -272,6 +278,11 @@ void Kart::doCollisions()
 		const float afterBRX = xPosition - sinAngleWidth - cosAngleLength + xVelocity;
 		const float afterBRY = yPosition + cosAngleWidth - sinAngleLength + yVelocity;
 
+		Line flLine(beforeFLX, beforeFLY, afterFLX, afterFLY);
+		Line frLine(beforeFRX, beforeFRY, afterFRX, afterFRY);
+		Line blLine(beforeBLX, beforeBLY, afterBLX, afterBLY);
+		Line brLine(beforeBRX, beforeBRY, afterBRX, afterBRY);
+
 		Corner corner;
 		float xIntersect;
 		float yIntersect;
@@ -283,22 +294,22 @@ void Kart::doCollisions()
 		{
 			Wall* wall = race[currentCheckpoint]->getCollisionWallGroup()[i];
 
-			if (Line::getLineSegmentIntersection(Line(beforeFLX, beforeFLY, afterFLX, afterFLY),
+			if (Line::getLineSegmentIntersection(&flLine,
 				wall->getLine(), &xIntersect, &yIntersect, &xNormal, &yNormal, &time))
 			{
 				corner = Corner::FrontLeft;
 			}
-			if (Line::getLineSegmentIntersection(Line(beforeFRX, beforeFRY, afterFRX, afterFRY),
+			if (Line::getLineSegmentIntersection(&frLine,
 				wall->getLine(), &xIntersect, &yIntersect, &xNormal, &yNormal, &time))
 			{
 				corner = Corner::FrontRight;
 			}
-			if (Line::getLineSegmentIntersection(Line(beforeBLX, beforeBLY, afterBLX, afterBLY),
+			if (Line::getLineSegmentIntersection(&blLine,
 				wall->getLine(), &xIntersect, &yIntersect, &xNormal, &yNormal, &time))
 			{
 				corner = Corner::BackLeft;
 			}
-			if (Line::getLineSegmentIntersection(Line(beforeBRX, beforeBRY, afterBRX, afterBRY),
+			if (Line::getLineSegmentIntersection(&brLine,
 				wall->getLine(), &xIntersect, &yIntersect, &xNormal, &yNormal, &time))
 			{
 				corner = Corner::BackRight;
@@ -392,7 +403,7 @@ void Kart::doCheckpoints(float xPositionBefore, float yPositionBefore)
 
 	// attempt the checkpoint behind
 	int behindIndex = currentCheckpoint == 0 ? checkpointCount - 1 : currentCheckpoint - 1;
-	if (Line::getLineSegmentIntersection(kartMovement,
+	if (Line::getLineSegmentIntersection(&kartMovement,
 		race[behindIndex]->getLine(),
 		&xIntersect, &yIntersect, &xNormal, &yNormal, &time))
 	{
@@ -404,7 +415,7 @@ void Kart::doCheckpoints(float xPositionBefore, float yPositionBefore)
 	}
 
 	// attempt the checkpoint ahead
-	if (Line::getLineSegmentIntersection(kartMovement,
+	if (Line::getLineSegmentIntersection(&kartMovement,
 		race[currentCheckpoint]->getLine(),
 		&xIntersect, &yIntersect, &xNormal, &yNormal, &time))
 	{

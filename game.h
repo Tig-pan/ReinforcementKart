@@ -41,6 +41,8 @@ private:
 	Kart* kart;
 	Input* input;
 
+	Kart* aiKart;
+
 	Label lapLabel;
 	Label lapProgressLabel;
 

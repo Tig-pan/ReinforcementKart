@@ -87,8 +87,11 @@ Game::Game(std::string mapFileName, Input* input, sf::RenderWindow& window, sf::
 	}
 	// Done loading map
 
-	kart = new Kart("Game", input, sf::Color::Yellow, 0, 0, startAngle, checkpoints, checkpointCount);
+	kart = new Kart("Game", input, nullptr, sf::Color::Yellow, 0, 0, startAngle, checkpoints, checkpointCount);
 	guiView = sf::View(sf::FloatRect(0, 0, window.getSize().x, window.getSize().y));
+
+	KartSensors* sensors = new KartSensors();
+	aiKart = new Kart("AI", new AvoidanceAI(sensors), sensors, sf::Color::Blue, 0, 0, startAngle, checkpoints, checkpointCount);
 }
 
 void Game::run()
@@ -112,6 +115,9 @@ void Game::run()
 			//tf.handleEvent(window, e);
 		}
 
+
+		aiKart->tick();
+		aiKart->update();
 		kart->tick();
 		kart->update();
 		gameView = sf::View(sf::FloatRect(
@@ -120,17 +126,18 @@ void Game::run()
 			window.getSize().x,
 			window.getSize().y));
 
-		updateGUI();
-
-		window.clear();
 		window.setView(gameView);
+		window.clear();
 		for (int i = 0; i < wallCount; i++)
 		{
 			walls[i]->render(window);
 		}
+		aiKart->render(window);
 		kart->render(window);
 
 		window.setView(guiView);
+		updateGUI();
+
 		lapLabel.render(window);
 		lapProgressLabel.render(window);
 

@@ -17,15 +17,15 @@ public:
 	Wall** getCollisionWallGroup() { return collisionWallGrouping; }
 	int getWallsInCollisionGroup() { return wallsInCollisionGroup; }
 
-	Wall** getVisionWallGroup() { return collisionWallGrouping; }
-	int getWallsInVisionGroup() { return wallsInCollisionGroup; }
+	Wall** getVisionWallGroup() { return visionWallGrouping; }
+	int getWallsInVisionGroup() { return wallsInVisionGroup; }
 
 	void setX1(TextFieldResult result) { line.x1 = result.floatResult; }
 	void setY1(TextFieldResult result) { line.y1 = result.floatResult; }
 	void setX2(TextFieldResult result) { line.x2 = result.floatResult; }
 	void setY2(TextFieldResult result) { line.y2 = result.floatResult; }
 
-	Line getLine() { return line; }
+	Line* getLine() { return &line; }
 private:
 	Wall** collisionWallGrouping;
 	int wallsInCollisionGroup;
@@ -115,7 +115,7 @@ public:
 	void setX2(TextFieldResult result) { line.x2 = result.floatResult; }
 	void setY2(TextFieldResult result) { line.y2 = result.floatResult; }
 
-	Line getLine() { return line; }
+	Line* getLine() { return &line; }
 private:
 	std::list<Wall*> collisionWalls;
 	std::list<Wall*> visionWalls;

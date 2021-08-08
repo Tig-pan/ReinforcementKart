@@ -1,14 +1,21 @@
 #pragma once
 
-#include "kart.h"
+#include <SFML/Graphics.hpp>
+
+#include "line.h"
+#include "wall.h"
+#include "constants.h"
 
 /* A class that allows accessing various data about the kart. Typically used by inputs/AIs.
 */
 class KartSensors
 {
 public:
-	// A constructor for the KartSensors, takes the Kart to make the sensors for as a parameter
-	KartSensors(Kart& kart);
+	// A constructor for the KartSensors
+	KartSensors();
+
+	// Updates the positions/rotations of the kart so that the raycasts operate relative to the kart
+	void tick(float newOriginX, float newOriginY, float newOriginAngle, Line* newNextCheckpointLine, Wall** newVisionGroup, int newVisionGroupSize);
 
 	/*Does a raycast where the origin is based on the leftToRight and frontToBack variables, and the angle is the kartAngle + relativeAngle.Then stores the outputs in the KartSensors' output variables
 
@@ -18,6 +25,9 @@ public:
 	length: the length of the raycast*/
 	void raycastRelativeAngle(float leftToRight, float frontToBack, float relativeAngle, float length);
 
+	// returns the angle to the closest point on the checkpoint from the kart and its current angle
+	float getAngleToNextCheckpoint();
+
 	float getOutputX() { return outputX; }
 	float getOutputY() { return outputY; }
 	float getOutputNormalX() { return outputNormalX; }
@@ -25,7 +35,14 @@ public:
 	float getOutputTime() { return outputTime; }
 private:
 	// Executes a raycast over all the walls in the kart's current checkpoint's vision group
-	void raycast(float startX, float startY, float angle);
+	void raycast(Line kartLine);
+
+	float originX;
+	float originY;
+	float originAngle;
+	Line* nextCheckpointLine;
+	Wall** visionGroup;
+	int visionGroupSize;
 
 	float outputX;
 	float outputY;

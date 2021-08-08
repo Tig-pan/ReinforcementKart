@@ -1,6 +1,7 @@
 #pragma once
 
 #include <math.h>
+#include <iostream>
 
 /*
 A struct to represent a line segment in the world. Used by Walls, Checkpoints, etc.
@@ -13,16 +14,19 @@ public:
 	{}
 
 	// Returns the distance from the start of the line to the point
-	static float distanceToStart(float px, float py, Line line);
+	static float distanceToStart(float px, float py, Line* line);
 
 	// Returns the distance from the end of the line to the point
-	static float distanceToEnd(float px, float py, Line line);
+	static float distanceToEnd(float px, float py, Line* line);
 
 	// Returns the distance from the closest place on the line to the point
-	static float distanceToLine(float px, float py, Line line);
+	static float distanceToLine(float px, float py, Line* line);
+
+	// Returns the angle from the closest place on the line to the point with the given velocity
+	static float angleToLine(float px, float py, float vx, float vy, Line* line);
 
 	// Returns true if the lines intersect, also updates the output x and output y variables with the intersection point
-	static bool getLineSegmentIntersection(Line kLine, Line wLine, float* ox, float* oy, float* onx, float* ony, float* otime);
+	static bool getLineSegmentIntersection(Line* kLine, Line* wLine, float* ox, float* oy, float* onx, float* ony, float* otime);
 
 	float x1;
 	float y1;

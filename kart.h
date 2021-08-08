@@ -1,11 +1,5 @@
 #pragma once
 
-#define KART_WIDTH 20
-#define KART_LENGTH 30
-
-#define KART_WHEEL_LENGTH 10
-#define KART_WHEEL_WIDTH 8
-
 #define KART_WHEEL_ANGLE_LIMIT 40
 
 #include <SFML/Graphics.hpp>
@@ -46,7 +40,7 @@ public:
 	startY: a float representing the initial y position of the kart
 	startAngle: a float representing the initial angle of the kart (in degrees)
 	*/
-	Kart(std::string racerName, Input* input, sf::Color kartColor, float startX, float startY, float startAngle, Checkpoint** race, int checkpointCount);
+	Kart(std::string racerName, Input* input, KartSensors* sensors, sf::Color kartColor, float startX, float startY, float startAngle, Checkpoint** race, int checkpointCount);
 
 	// Called every frame, updates the Karts velocity based on inputs
 	void tick();
@@ -123,6 +117,7 @@ private:
 	sf::RectangleShape wheel;
 
 	Input* input;
+	KartSensors* sensors;
 	Checkpoint** race;
 	int checkpointCount;
 

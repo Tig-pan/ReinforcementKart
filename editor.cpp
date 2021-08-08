@@ -448,8 +448,8 @@ void Editor::renderSelection()
                 checkpointLines[1].color = sf::Color::Green;
             }
 
-            checkpointLines[0].position = sf::Vector2f((*it).getLine().x1, (*it).getLine().y1);
-            checkpointLines[1].position = sf::Vector2f((*it).getLine().x2, (*it).getLine().y2);
+            checkpointLines[0].position = sf::Vector2f((*it).getLine()->x1, (*it).getLine()->y1);
+            checkpointLines[1].position = sf::Vector2f((*it).getLine()->x2, (*it).getLine()->y2);
 
             window.draw(checkpointLines, 2, sf::PrimitiveType::Lines);
         }
@@ -509,17 +509,17 @@ void Editor::updateSelectedWall(Wall* newSelection)
         currentlySelectedWall->setThickness(SELECTED_WALL_THICKNESS);
 
         std::ostringstream ss; // have to use string stream because its the only way that formats properly
-        ss << (currentlySelectedWall->getLine().x1);
+        ss << (currentlySelectedWall->getLine()->x1);
         startXInput->setNewString(ss.str());
         ss.str(std::string()); // clears the ss
-        ss << (currentlySelectedWall->getLine().y1);
+        ss << (currentlySelectedWall->getLine()->y1);
         startYInput->setNewString(ss.str());
 
         ss.str(std::string());
-        ss << (currentlySelectedWall->getLine().x2);
+        ss << (currentlySelectedWall->getLine()->x2);
         endXInput->setNewString(ss.str());
         ss.str(std::string());
-        ss << (currentlySelectedWall->getLine().y2);
+        ss << (currentlySelectedWall->getLine()->y2);
         endYInput->setNewString(ss.str());
 
         startColorR->setNewString(std::to_string(currentlySelectedWall->getColor1().r));
@@ -555,17 +555,17 @@ void Editor::updateSelectedCheckpoint(EditorCheckpoint* newSelection)
         }
 
         std::ostringstream ss; // have to use string stream because its the only way that formats properly
-        ss << (currentlySelectedCheckpoint->getLine().x1);
+        ss << (currentlySelectedCheckpoint->getLine()->x1);
         startXInput->setNewString(ss.str());
         ss.str(std::string()); // clears the ss
-        ss << (currentlySelectedCheckpoint->getLine().y1);
+        ss << (currentlySelectedCheckpoint->getLine()->y1);
         startYInput->setNewString(ss.str());
 
         ss.str(std::string());
-        ss << (currentlySelectedCheckpoint->getLine().x2);
+        ss << (currentlySelectedCheckpoint->getLine()->x2);
         endXInput->setNewString(ss.str());
         ss.str(std::string());
-        ss << (currentlySelectedCheckpoint->getLine().y2);
+        ss << (currentlySelectedCheckpoint->getLine()->y2);
         endYInput->setNewString(ss.str());
     }
 }
@@ -656,7 +656,7 @@ void Editor::openEditting()
 
 
     editorKeyboardInput = new KeyboardInput();
-    editorKart = new Kart("Edit Mode", editorKeyboardInput, sf::Color::Yellow, 0, 0, startAngle, nullptr, 0);
+    editorKart = new Kart("Edit Mode", editorKeyboardInput, nullptr, sf::Color::Yellow, 0, 0, startAngle, nullptr, 0);
 
 
     resetPositionButton = new Button([this]() { clickResetPositionButton(); }, "Reset Position", 16, font, 
@@ -995,13 +995,13 @@ void Editor::saveMap()
 
     for (auto it = mapWalls.begin(); it != mapWalls.end(); it++)
     {
-        temp = (*it).getLine().x1;
+        temp = (*it).getLine()->x1;
         output.write((char*)&temp, sizeof(temp));
-        temp = (*it).getLine().y1;
+        temp = (*it).getLine()->y1;
         output.write((char*)&temp, sizeof(temp));
-        temp = (*it).getLine().x2;
+        temp = (*it).getLine()->x2;
         output.write((char*)&temp, sizeof(temp));
-        temp = (*it).getLine().y2;
+        temp = (*it).getLine()->y2;
         output.write((char*)&temp, sizeof(temp));
 
         colorTemp = (*it).getColor1().r;
@@ -1024,13 +1024,13 @@ void Editor::saveMap()
 
     for (auto it = mapCheckpoints.begin(); it != mapCheckpoints.end(); it++)
     {
-        temp = (*it).getLine().x1;
+        temp = (*it).getLine()->x1;
         output.write((char*)&temp, sizeof(temp));
-        temp = (*it).getLine().y1;
+        temp = (*it).getLine()->y1;
         output.write((char*)&temp, sizeof(temp));
-        temp = (*it).getLine().x2;
+        temp = (*it).getLine()->x2;
         output.write((char*)&temp, sizeof(temp));
-        temp = (*it).getLine().y2;
+        temp = (*it).getLine()->y2;
         output.write((char*)&temp, sizeof(temp));
 
         number = (*it).getCollisionWalls().size();
@@ -1138,8 +1138,8 @@ sf::Vector2i Editor::getRelativeMouse()
             float dist = Line::distanceToStart(x, y, (*it).getLine());
             if (dist < closestDistance)
             {
-                closestX = (*it).getLine().x1;
-                closestY = (*it).getLine().y1;
+                closestX = (*it).getLine()->x1;
+                closestY = (*it).getLine()->y1;
                 closestDistance = dist;
             }
 
@@ -1147,8 +1147,8 @@ sf::Vector2i Editor::getRelativeMouse()
             dist = Line::distanceToEnd(x, y, (*it).getLine());
             if (dist < closestDistance)
             {
-                closestX = (*it).getLine().x2;
-                closestY = (*it).getLine().y2;
+                closestX = (*it).getLine()->x2;
+                closestY = (*it).getLine()->y2;
                 closestDistance = dist;
             }
         }

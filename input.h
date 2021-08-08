@@ -2,6 +2,8 @@
 
 #include <SFML/Window.hpp>
 
+#include "kartSensors.h"
+
 /*
 An abstract class used to represent a method of giving input, this may be human input from a keyboard, or from an AI
 */
@@ -52,4 +54,31 @@ private:
 	bool currentDrift;
 	bool currentAction;
 	bool isActionHeld;
+};
+
+/*
+An incredibly simple bot that meerly drives forward, and steers/accelerates to avoid crashing
+*/
+class AvoidanceAI : public Input
+{
+public:
+	// A constructor for AvoidanceAI, takes a KartSensors class as an arguement
+	AvoidanceAI(KartSensors* sensor);
+
+	void update() override;
+
+	float getSteering() override;
+	float getMovement() override;
+	bool getDrift() override;
+	bool getAction() override;
+private:
+	KartSensors* sensor;
+
+	float currentSteer;
+	float currentMovement;
+
+	int currentDecision;
+	
+	bool isBackingUp;
+	bool currentDrift;
 };

@@ -2,6 +2,12 @@
 
 #define PI 3.14159265358979323846f
 
+#define KART_WIDTH 20
+#define KART_LENGTH 30
+
+#define KART_WHEEL_LENGTH 10
+#define KART_WHEEL_WIDTH 8
+
 #define DEG_TO_RAD PI/180.0f
 #define RAD_TO_DEG 180.0f/PI
 

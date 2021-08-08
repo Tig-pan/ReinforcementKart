@@ -35,7 +35,7 @@ public:
 	void setColor1(sf::Color color);
 	void setColor2(sf::Color color);
 
-	Line getLine() { return line; }
+	Line* getLine() { return &line; }
 
 	sf::Color getColor1() { return verticies[0].color; }
 	sf::Color getColor2() { return verticies[2].color; }
