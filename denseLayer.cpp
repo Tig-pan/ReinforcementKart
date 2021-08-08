@@ -1,0 +1,72 @@
+#include "layer.h"
+
+DenseLayer::DenseLayer(int inputNodes, int outputNodes, Activation* activation)
+	: inputNodes(inputNodes)
+	, outputNodes(outputNodes)
+	, activation(activation)
+{
+	nodes = new float[outputNodes];
+	error = new float[outputNodes];
+
+	// Initilize the network parameters using Xavier initilization
+	std::default_random_engine generator;
+	std::normal_distribution<float> distribution(0.0f, 1 / (float)inputNodes); // mean of 0, variance of 1/N
+
+	weights = new float[inputNodes * outputNodes];
+	biases = new float[outputNodes];
+
+	for (int i = 0; i < inputNodes * outputNodes; i++)
+	{
+		weights[i] = distribution(generator);
+	}
+
+	for (int i = 0; i < outputNodes; i++)
+	{
+		biases[i] = 0.0f;
+	}
+}
+
+void DenseLayer::feedForward(float* inputs)
+{
+	for (int i = 0; i < outputNodes; i++)
+	{
+		nodes[i] = 0.0f;
+		for (int j = 0; j < inputNodes; j++)
+		{
+			nodes[i] += inputs[j] * weights[i * inputNodes + j];
+		}
+	}
+	activation->activate(nodes, outputNodes);
+}
+
+void DenseLayer::backpropogate(float* inputs, Layer* outputLayer)
+{
+	// Error needs to be set properly prior to this being called
+	activation->applyDerivative(error, nodes, outputNodes);
+	for (int i = 0; i < outputNodes; i++)
+	{
+		biasGradients[i] = error[i];
+
+		for (int j = 0; j < inputNodes; j++)
+		{
+			weightGradients[i * inputNodes + j] = inputs[j] * error[i];
+		}
+	}
+}
+
+void DenseLayer::calculateErrorFrom(float* inputError)
+{
+	for (int j = 0; j < inputNodes; j++)
+	{
+		float total = 0.0f;
+		for (int i = 0; i < outputNodes; ++i)
+		{
+			total += weights[i * inputNodes + j] * error[i];
+		}
+		inputError[j] = total;
+	}
+}
+
+void DenseLayer::apply(float learningRate)
+{
+}

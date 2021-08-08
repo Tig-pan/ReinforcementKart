@@ -82,3 +82,30 @@ private:
 	bool isBackingUp;
 	bool currentDrift;
 };
+
+/*
+An AI that trains using Deep Q reinforcement learning in order to learn how to control the kart and maximize the track speed.
+*/
+class DeepQLearningAI : public Input
+{
+public:
+	// A constructor for DeepQLearningAI, takes a KartSensors class as an arguement
+	DeepQLearningAI(KartSensors* sensor);
+
+	void update() override;
+
+	float getSteering() override;
+	float getMovement() override;
+	bool getDrift() override;
+	bool getAction() override;
+private:
+	KartSensors* sensor;
+
+	float currentSteer;
+	float currentMovement;
+
+	int currentDecision;
+
+	bool isBackingUp;
+	bool currentDrift;
+};
