@@ -91,7 +91,14 @@ Game::Game(std::string mapFileName, Input* input, sf::RenderWindow& window, sf::
 	guiView = sf::View(sf::FloatRect(0, 0, window.getSize().x, window.getSize().y));
 
 	KartSensors* sensors = new KartSensors();
-	aiKart = new Kart("AI", new AvoidanceAI(sensors), sensors, sf::Color::Blue, 0, 0, startAngle, checkpoints, checkpointCount);
+	//aiKart = new Kart("AI", new AvoidanceAI(sensors), sensors, sf::Color::Blue, 0, 0, startAngle, checkpoints, checkpointCount);
+	aiKart = new Kart("AI", new DeepQLearningAI(sensors), sensors, sf::Color::Blue, 0, 0, startAngle, checkpoints, checkpointCount);
+
+	furthestAiProgress = 0.0f;
+	framesSinceAdditionalProgress = 0.0f;
+
+	maxSpeed = false;
+	maxSpeedButtonHeld = false;
 }
 
 void Game::run()
@@ -111,37 +118,78 @@ void Game::run()
 				window.setView(sf::View(sf::FloatRect(0, 0, e.size.width, e.size.height)));
 			}
 
+			if (e.type == sf::Event::KeyPressed && e.key.code == sf::Keyboard::Key::P && !maxSpeedButtonHeld)
+			{
+				maxSpeed = !maxSpeed;
+				maxSpeedButtonHeld = true;
+
+				if (maxSpeed)
+				{
+					window.setFramerateLimit(1000000);
+				}
+				else
+				{
+					window.setFramerateLimit(60);
+				}
+			}
+			if (e.type == sf::Event::KeyReleased && e.key.code == sf::Keyboard::Key::P)
+			{
+				maxSpeedButtonHeld = false;
+			}
+
+
 			//button.handleEvent(window, e);
 			//tf.handleEvent(window, e);
 		}
-
 
 		aiKart->tick();
 		aiKart->update();
 		kart->tick();
 		kart->update();
-		gameView = sf::View(sf::FloatRect(
-			kart->getX() - window.getSize().x * 0.5f,
-			kart->getY() - window.getSize().y * 0.5f,
-			window.getSize().x,
-			window.getSize().y));
 
-		window.setView(gameView);
-		window.clear();
-		for (int i = 0; i < wallCount; i++)
+		if (!maxSpeed)
 		{
-			walls[i]->render(window);
+			gameView = sf::View(sf::FloatRect(
+				kart->getX() - window.getSize().x * 0.5f,
+				kart->getY() - window.getSize().y * 0.5f,
+				window.getSize().x,
+				window.getSize().y));
 		}
-		aiKart->render(window);
-		kart->render(window);
 
-		window.setView(guiView);
-		updateGUI();
+		float currentAiProgress = aiKart->getForwardProgress();
+		if (currentAiProgress > furthestAiProgress + 0.01f)
+		{
+			furthestAiProgress = currentAiProgress;
+			framesSinceAdditionalProgress = 0;
+		}
+		else if (framesSinceAdditionalProgress++ > 90)
+		{
+			std::cout << "Reset at " << furthestAiProgress << " progress.\n";
+			aiKart->resetPosition(0, 0, startAngle);
 
-		lapLabel.render(window);
-		lapProgressLabel.render(window);
+			furthestAiProgress = 0.0f;
+			framesSinceAdditionalProgress = 0;
+		}
 
-		window.display();
+		if (!maxSpeed)
+		{
+			window.setView(gameView);
+			window.clear();
+			for (int i = 0; i < wallCount; i++)
+			{
+				walls[i]->render(window);
+			}
+			aiKart->render(window);
+			kart->render(window);
+
+			window.setView(guiView);
+			updateGUI();
+
+			lapLabel.render(window);
+			lapProgressLabel.render(window);
+
+			window.display();
+		}
 	}
 }
 

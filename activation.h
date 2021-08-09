@@ -66,3 +66,13 @@ public:
 	void activate(float* nodes, int size) override;
 	void applyDerivative(float* error, float* nodes, int size) override;
 };
+
+// A Linear activation function { Range: (-inf, inf), 0 -> 0 (this function has 0 effect, it is y = x) }
+class Linear : public Activation
+{
+public:
+	Linear() {}
+
+	void activate(float* nodes, int size) override {}
+	void applyDerivative(float* error, float* nodes, int size) override {}
+};

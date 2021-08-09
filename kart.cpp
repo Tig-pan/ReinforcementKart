@@ -10,7 +10,6 @@ Kart::Kart(std::string racerName, Input* input, KartSensors* sensors, sf::Color 
 
 	, checkpointCount(checkpointCount)
 	, currentCheckpoint(0)
-	, furthestCheckpoint(0)
 	, lapNumber(0)
 
 	, checkpointProgress(0.0f)
@@ -41,7 +40,7 @@ void Kart::tick()
 	
 	if (sensors != nullptr)
 	{
-		sensors->tick(xPosition, yPosition, angle, race[(currentCheckpoint + 1) % checkpointCount]->getLine(), race[currentCheckpoint]->getVisionWallGroup(), race[currentCheckpoint]->getWallsInVisionGroup());
+		sensors->tick(xPosition, yPosition, isDrifting, xVelocity, yVelocity, angle, getForwardProgress(), race[(currentCheckpoint + 1) % checkpointCount]->getLine(), race[currentCheckpoint]->getVisionWallGroup(), race[currentCheckpoint]->getWallsInVisionGroup());
 	}
 
 	input->update();
@@ -150,6 +149,9 @@ void Kart::render(sf::RenderWindow& window)
 
 void Kart::resetPosition(float newXPosition, float newYPosition, float newAngle)
 {
+	lapNumber = 0;
+	currentCheckpoint = 0.0;
+
 	xPosition = newXPosition;
 	yPosition = newYPosition;
 	angle = newAngle;
@@ -158,11 +160,18 @@ void Kart::resetPosition(float newXPosition, float newYPosition, float newAngle)
 	xVelocity = 0.0f;
 	yVelocity = 0.0f;
 	kartSpin = 0.0f;
+
+	input->reset();
 }
 
 float Kart::getLapProgress()
 {
-	return ((float)furthestCheckpoint + checkpointProgress) / (float)checkpointCount;
+	return ((float)currentCheckpoint + checkpointProgress) / (float)checkpointCount;
+}
+
+float Kart::getForwardProgress()
+{
+	return lapNumber * (float)checkpointCount + (float)currentCheckpoint + checkpointProgress;
 }
 
 float Kart::getAngleBetween(float vectorX, float vectorY, float usedAngle)
@@ -407,33 +416,24 @@ void Kart::doCheckpoints(float xPositionBefore, float yPositionBefore)
 		race[behindIndex]->getLine(),
 		&xIntersect, &yIntersect, &xNormal, &yNormal, &time))
 	{
-		currentCheckpoint--;
-		if (currentCheckpoint == -1)
+		currentCheckpoint--; 
+		if (currentCheckpoint == -1) // update the lap
 		{
 			currentCheckpoint = checkpointCount - 1;
+			lapNumber--;
 		}
 	}
-
 	// attempt the checkpoint ahead
-	if (Line::getLineSegmentIntersection(&kartMovement,
+	else if (Line::getLineSegmentIntersection(&kartMovement,
 		race[currentCheckpoint]->getLine(),
 		&xIntersect, &yIntersect, &xNormal, &yNormal, &time))
 	{
+		// update the checkpoin
 		currentCheckpoint++;
-		if (currentCheckpoint == checkpointCount)
+		if (currentCheckpoint == checkpointCount) // update the lap
 		{
 			currentCheckpoint = 0;
-		}
-
-		// update the furthest checkpoint and lap
-		if (currentCheckpoint == 0 && furthestCheckpoint == checkpointCount - 1)
-		{
-			furthestCheckpoint = 0;
 			lapNumber++;
-		}
-		else if (furthestCheckpoint == currentCheckpoint - 1)
-		{
-			furthestCheckpoint++;
 		}
 	}
 

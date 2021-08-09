@@ -2,14 +2,23 @@
 
 KartSensors::KartSensors()
 {
-
+	previousForwardProgress = 0.0f;
 }
 
-void KartSensors::tick(float newOriginX, float newOriginY, float newOriginAngle, Line* newNextCheckpointLine, Wall** newVisionGroup, int newVisionGroupSize)
+void KartSensors::tick(float newOriginX, float newOriginY, bool newIsDrifting, float newXVelocity, float newYVelocity, float newOriginAngle, float currentForwardProgress, Line* newNextCheckpointLine, Wall** newVisionGroup, int newVisionGroupSize)
 {
 	originX = newOriginX;
 	originY = newOriginY;
+
+	isDrifting = newIsDrifting;
+
+	xVelocity = newXVelocity;
+	yVelocity = newYVelocity;
+
 	originAngle = newOriginAngle;
+
+	progressMade = currentForwardProgress - previousForwardProgress;
+	previousForwardProgress = currentForwardProgress;
 
 	nextCheckpointLine = newNextCheckpointLine;
 
@@ -32,7 +41,7 @@ void KartSensors::raycastRelativeAngle(float leftToRight, float frontToBack, flo
 
 float KartSensors::getAngleToNextCheckpoint()
 {
-	float angle = Line::angleToLine(originX, originY, cosf(originAngle * DEG_TO_RAD), sinf(originAngle * DEG_TO_RAD), nextCheckpointLine);
+	const float angle = Line::angleToLine(originX, originY, cosf(originAngle * DEG_TO_RAD), sinf(originAngle * DEG_TO_RAD), nextCheckpointLine);
 	// TODO: this is an unoptimal way of solving this
 	if (Line::distanceToLine(originX + cosf(originAngle * DEG_TO_RAD + angle), originY + sinf(originAngle * DEG_TO_RAD + angle), nextCheckpointLine) <
 		Line::distanceToLine(originX + cosf(originAngle * DEG_TO_RAD - angle), originY + sinf(originAngle * DEG_TO_RAD - angle), nextCheckpointLine))
@@ -43,6 +52,22 @@ float KartSensors::getAngleToNextCheckpoint()
 	{
 		return -angle;
 	}
+}
+
+float KartSensors::getForwardVelocity()
+{
+	const float dot = xVelocity * cosf(originAngle * DEG_TO_RAD) + yVelocity * sinf(originAngle * DEG_TO_RAD);
+
+	// we know the magnitude squared of the forwad projection is 1, so we can just return the dot
+	return dot;
+}
+
+float KartSensors::getRightwardVelocity()
+{
+	const float dot = xVelocity * cosf((originAngle + 90.0f) * DEG_TO_RAD) + yVelocity * sinf((originAngle + 90.0f) * DEG_TO_RAD);
+
+	// we know the magnitude squared of the forwad projection is 1, so we can just return the dot
+	return dot;
 }
 
 void KartSensors::raycast(Line kartLine)

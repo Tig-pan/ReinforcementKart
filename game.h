@@ -42,6 +42,8 @@ private:
 	Input* input;
 
 	Kart* aiKart;
+	float furthestAiProgress;
+	int framesSinceAdditionalProgress;
 
 	Label lapLabel;
 	Label lapProgressLabel;
@@ -51,4 +53,7 @@ private:
 	Wall** walls; // array of wall pointers
 	int checkpointCount;
 	Checkpoint** checkpoints; // array of checkpoint pointers
+
+	bool maxSpeed;
+	bool maxSpeedButtonHeld;
 };

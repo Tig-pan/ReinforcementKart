@@ -2,7 +2,10 @@
 
 #include <SFML/Window.hpp>
 
+#include <random>
+
 #include "kartSensors.h"
+#include "network.h"
 
 /*
 An abstract class used to represent a method of giving input, this may be human input from a keyboard, or from an AI
@@ -10,6 +13,9 @@ An abstract class used to represent a method of giving input, this may be human 
 class Input abstract
 {
 public:
+	// Called after the kart position is reset, typically used by reinforcement bots to not train for the previous action taken
+	virtual void reset() = 0;
+
 	// Called every frame, allows the Input to update its values however nessesary (ex. from a keyboard or from an AI)
 	virtual void update() = 0;
 
@@ -42,6 +48,7 @@ public:
 	// A constructor for KeyboardInput, takes no arguments
 	KeyboardInput();
 
+	void reset() { }
 	void update() override;
 
 	float getSteering() override;
@@ -65,6 +72,7 @@ public:
 	// A constructor for AvoidanceAI, takes a KartSensors class as an arguement
 	AvoidanceAI(KartSensors* sensor);
 
+	void reset() { }
 	void update() override;
 
 	float getSteering() override;
@@ -92,6 +100,7 @@ public:
 	// A constructor for DeepQLearningAI, takes a KartSensors class as an arguement
 	DeepQLearningAI(KartSensors* sensor);
 
+	void reset() override;
 	void update() override;
 
 	float getSteering() override;
@@ -99,13 +108,34 @@ public:
 	bool getDrift() override;
 	bool getAction() override;
 private:
+	const static int INPUT_SIZE = 27;
+	const static int ACTION_COUNT = 9; // 13 with drifts
+
+	// Fills up the given state array with the appropriate measured values
+	void fillStateArr(float* arr);
+
+	// Executes the action according to the selection action
+	void executeAction(int action);
+
 	KartSensors* sensor;
+
+	Network* qNetwork; // inputs = sensor data | outputs = Q value for each action
+
+	Softmax* softmax; // used to softmax the action q values to pick a random one
+
+	std::default_random_engine generator;
+	std::uniform_real<float> distribution;
+
+	float* actionExpectedQs;
+	float* stateArrA;
+	float* stateArrB;
+	bool previousIsA;
+
+	int previousActionIndex;
+
+	float discountFactor;
 
 	float currentSteer;
 	float currentMovement;
-
-	int currentDecision;
-
-	bool isBackingUp;
 	bool currentDrift;
 };

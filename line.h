@@ -22,7 +22,7 @@ public:
 	// Returns the distance from the closest place on the line to the point
 	static float distanceToLine(float px, float py, Line* line);
 
-	// Returns the angle from the closest place on the line to the point with the given velocity
+	// Returns the angle (radians) from the closest place on the line to the point with the given velocity
 	static float angleToLine(float px, float py, float vx, float vy, Line* line);
 
 	// Returns true if the lines intersect, also updates the output x and output y variables with the intersection point

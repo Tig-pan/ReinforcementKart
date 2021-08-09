@@ -69,6 +69,9 @@ public:
 	// Returns a number from 0-1 representing the percentage of the current lap completed
 	float getLapProgress();
 
+	// Returns a number from 0-checkpointCount representing the percentage of the current lap completed
+	float getForwardProgress();
+
 	// Returns the vision group of walls for the current checkpoint
 	Wall** getVisionCheckpointGroup() { return race[currentCheckpoint]->getVisionWallGroup(); }
 
@@ -122,7 +125,6 @@ private:
 	int checkpointCount;
 
 	int currentCheckpoint;
-	int furthestCheckpoint;
 	int lapNumber;
 
 	float checkpointProgress;

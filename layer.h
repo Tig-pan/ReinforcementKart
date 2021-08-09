@@ -1,6 +1,7 @@
 #pragma once
 
 #include <random>
+#include <iostream>
 
 #include "activation.h"
 
@@ -14,16 +15,19 @@ public:
 	virtual void feedForward(float* inputs) = 0;
 
 	// Backpropogates the error throughout the layer and updates the gradients
-	virtual void backpropogate(float* inputs, Layer* outputLayer) = 0;
+	virtual void backpropogate(float* inputs) = 0;
 
 	// Updates the error for the input layer using the current error and weights stored in this layer
 	virtual void calculateErrorFrom(float* inputError) = 0;
 
-	// Applies the current gradients
-	virtual void apply(float learningRate) = 0;
+	// Applies the current gradients, uses the given learningRate and weightDecay
+	virtual void apply(float learningRate, float weightDecay) = 0;
 
 	float* nodes;
 	float* error;
+
+	int inputNodes;
+	int outputNodes;
 };
 
 /*
@@ -35,14 +39,11 @@ public:
 	DenseLayer(int inputNodes, int outputNodes, Activation* activation);
 
 	void feedForward(float* inputs) override;
-	void backpropogate(float* inputs, Layer* outputLayer) override;
+	void backpropogate(float* inputs) override;
 	void calculateErrorFrom(float* inputError) override;
-	void apply(float learningRate) override;
+	void apply(float learningRate, float weightDecay) override;
 
 protected:
-	int inputNodes;
-	int outputNodes;
-
 	Activation* activation;
 
 	float* weights;
