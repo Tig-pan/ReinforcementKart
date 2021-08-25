@@ -8,9 +8,9 @@ DeepQLearningAI::DeepQLearningAI(KartSensors* sensor)
 	const int layerCount = 3;
 
 	Layer** layers = new Layer*[layerCount];
-	layers[0] = new DenseLayer(INPUT_SIZE, 100, new Sigmoid());
-	layers[1] = new DenseLayer(100, 60, new Sigmoid());
-	layers[2] = new DenseLayer(60, ACTION_COUNT, new Linear());
+	layers[0] = new DenseLayer(INPUT_SIZE, 60, new Sigmoid());
+	layers[1] = new DenseLayer(60, 40, new Sigmoid());
+	layers[2] = new DenseLayer(40, ACTION_COUNT, new Linear());
 
 	qNetwork = new Network(Loss::MeanSquaredError,
 		0.001f, // learning rate
@@ -23,21 +23,40 @@ DeepQLearningAI::DeepQLearningAI(KartSensors* sensor)
 	actionExpectedQs = new float[ACTION_COUNT];
 	stateArrA = new float[INPUT_SIZE];
 	stateArrB = new float[INPUT_SIZE];
+	previousIsA = false;
+
+	memoryBeforeStates = new float[MEMORY_SIZE * INPUT_SIZE];
+	memoryAfterStates = new float[MEMORY_SIZE * INPUT_SIZE];
+	memoryActions = new int[MEMORY_SIZE];
+	memoryRewards = new float[MEMORY_SIZE];
+	currentMemoryIndex = -1;
+	isMemoryFull = false;
 
 	previousActionIndex = -1; // -1 means no action was taken
 
 	discountFactor = 0.9f;
+
+	justFailed = false;
 }
 
 void DeepQLearningAI::reset()
 {
-	previousActionIndex = -1;
+	justFailed = true;
 }
 
 void DeepQLearningAI::update()
 {
 	// Get the current reward for this tick based on the previous action
-	float reward = sensor->getProgressMade() * 5000.0f;
+	float reward;
+	if (justFailed)
+	{
+		reward = -150.0f;
+		justFailed = false;
+	}
+	else
+	{
+		reward = sensor->getProgressMade() * 1000.0f;
+	}
 
 	// Makes variables for quick access to the current state and the previous state
 	float* currentState = previousIsA ? stateArrB : stateArrA;
@@ -46,57 +65,68 @@ void DeepQLearningAI::update()
 	// Gets the current state from sensor data
 	fillStateArr(currentState);
 
-	// Get the Q values for all possible actions in the current state
-	float* actionQValues = qNetwork->predict(currentState);
-
-	float maxPossibleQ = actionQValues[0];
-	for (int i = 1; i < ACTION_COUNT; i++)
+	if (isMemoryFull)
 	{
-		//std::cout << i << ": " << actionQValues[i] << "\n";
-		if (actionQValues[i] > maxPossibleQ)
+		for (int i = 0; i < MEMORY_TRAINS; i++)
 		{
-			maxPossibleQ = actionQValues[i];
-		}
-	}
-	//std::cout << "\n";
-
-	// Pick a random action based on the softmax of the actionValues
-	softmax->activate(actionQValues, ACTION_COUNT);
-	int pickedActionIndex;
-	float decision = distribution(generator);
-	if (distribution(generator) < 0.01f)
-	{
-		pickedActionIndex = rand() % ACTION_COUNT;
-	}
-	else
-	{
-		for (pickedActionIndex = 0; decision > 0.0f; pickedActionIndex++)
-		{
-			decision -= actionQValues[pickedActionIndex];
-		}
-		pickedActionIndex--;
-	}
-
-	// Train based on maxPossibleQ and the current reward
-	if (previousActionIndex != -1)
-	{
-		for (int i = 0; i < ACTION_COUNT; i++)
-		{
-			if (i == previousActionIndex) // only trains for the action selected
+			int index = generator() % MEMORY_SIZE;
+			while (index != currentMemoryIndex && index != nextMemoryIndex)
 			{
-				actionExpectedQs[i] = reward + discountFactor * maxPossibleQ;
+				index = generator() % MEMORY_SIZE;
+			}
+			train(&memoryBeforeStates[index * INPUT_SIZE], &memoryAfterStates[index * INPUT_SIZE], memoryActions[index], memoryRewards[index]);
+		}
+	}
+	train(previousState, currentState, previousActionIndex, reward);
+
+	qNetwork->apply();
+
+	// Set the relevant memory
+	if (currentMemoryIndex != -1)
+	{
+		if (isMemoryFull)
+		{
+			nextMemoryIndex = generator() % MEMORY_SIZE;
+		}
+		else
+		{
+			if (currentMemoryIndex == MEMORY_SIZE - 1)
+			{
+				isMemoryFull = true;
+				nextMemoryIndex = generator() % MEMORY_SIZE;
 			}
 			else
 			{
-				actionExpectedQs[i] = NAN;
+				nextMemoryIndex = currentMemoryIndex + 1;
 			}
 		}
-		qNetwork->train(previousState, actionExpectedQs);
+
+		int currentMemoryOffset = currentMemoryIndex * INPUT_SIZE;
+		int nextMemoryOffset = nextMemoryIndex * INPUT_SIZE;
+
+		memoryRewards[currentMemoryIndex] = reward;
+		memoryActions[nextMemoryIndex] = currentActionIndex;
+		for (int i = 0; i < INPUT_SIZE; i++)
+		{
+			memoryAfterStates[currentMemoryOffset + i] = currentState[i];
+			memoryBeforeStates[nextMemoryOffset + i] = currentState[i];
+		}
+
+		currentMemoryIndex = nextMemoryIndex;
+	}
+	else
+	{
+		memoryActions[0] = currentActionIndex;
+		for (int i = 0; i < INPUT_SIZE; i++)
+		{
+			memoryBeforeStates[i] = currentState[i];
+		}
+		currentMemoryIndex = 0;
 	}
 
 	// Executes the action and sets previous variables
-	executeAction(pickedActionIndex);
-	previousActionIndex = pickedActionIndex;
+	executeAction(currentActionIndex);
+	previousActionIndex = currentActionIndex;
 	previousIsA = !previousIsA;
 }
 
@@ -136,11 +166,11 @@ void DeepQLearningAI::fillStateArr(float* arr)
 	sensor->raycastRelativeAngle(1.0f, 0.0f, 2, DISTANCE); // slight right
 	arr[4] = 1.0f - sensor->getOutputTime();
 
-	sensor->raycastRelativeAngle(0.5f, 0.0f, 0, DISTANCE / 10.0f); // close forward
+	sensor->raycastRelativeAngle(0.5f, 0.0f, 0, DISTANCE / 3.0f); // close forward
 	arr[5] = 1.0f - sensor->getOutputTime();
-	sensor->raycastRelativeAngle(0.0f, 0.0f, -2, DISTANCE / 10.0f); // close slight left
+	sensor->raycastRelativeAngle(0.0f, 0.0f, -2, DISTANCE / 3.0f); // close slight left
 	arr[6] = 1.0f - sensor->getOutputTime();
-	sensor->raycastRelativeAngle(1.0f, 0.0f, 2, DISTANCE / 10.0f); // close slight right
+	sensor->raycastRelativeAngle(1.0f, 0.0f, 2, DISTANCE / 3.0f); // close slight right
 	arr[7] = 1.0f - sensor->getOutputTime();
 
 	sensor->raycastRelativeAngle(0.0f, 0.0f, -7.5f, DISTANCE); // tiny left
@@ -252,5 +282,50 @@ void DeepQLearningAI::executeAction(int action)
 		currentSteer = -1.0f;
 		currentDrift = true;
 		break;*/
+	}
+}
+
+void DeepQLearningAI::train(float* previousState, float* currentState, int actionIndex, float reward)
+{
+	// Get the Q values for all possible actions in the current state
+	float* actionQValues = qNetwork->predict(currentState);
+
+	float maxPossibleQ = actionQValues[0];
+	for (int i = 1; i < ACTION_COUNT; i++)
+	{
+		if (actionQValues[i] > maxPossibleQ)
+		{
+			maxPossibleQ = actionQValues[i];
+		}
+	}
+
+	/*std::cout << "a\n";
+	if (currentState == stateArrA || currentState == stateArrB)
+		std::cout << maxPossibleQ << "\n";*/
+
+	// Pick a random action based on the softmax of the actionValues
+	softmax->activate(actionQValues, ACTION_COUNT);
+	float decision = distribution(generator);
+	for (currentActionIndex = 0; decision > 0.0f; currentActionIndex++)
+	{
+		decision -= actionQValues[currentActionIndex];
+	}
+	currentActionIndex--;
+
+	// Train based on maxPossibleQ and the current reward
+	if (actionIndex != -1)
+	{
+		for (int i = 0; i < ACTION_COUNT; i++)
+		{
+			if (i == actionIndex) // only trains for the action selected
+			{
+				actionExpectedQs[i] = reward + discountFactor * maxPossibleQ;
+			}
+			else
+			{
+				actionExpectedQs[i] = NAN;
+			}
+		}
+		qNetwork->train(previousState, actionExpectedQs);
 	}
 }

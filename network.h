@@ -21,10 +21,13 @@ public:
 	float* predict(float* inputs);
 
 	/* First predicts using the inputs, then calculates the error (using the expectedOutputs) from 
-	the latest predictionand backprogates it through the network, updating the layer weights after all gradients are calculated.
+	the latest predictionand backprogates it through the network, updating the gradients.
 
 	Then returns the loss of the training. */
 	float train(float* inputs, float* expectedOutputs);
+
+	// Applys the gradients to the weights and biases of the network, also resets the gradients
+	void apply();
 
 private:
 	Layer** layers;

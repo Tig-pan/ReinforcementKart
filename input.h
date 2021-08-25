@@ -108,6 +108,8 @@ public:
 	bool getDrift() override;
 	bool getAction() override;
 private:
+	const static int MEMORY_TRAINS = 9;
+	const static int MEMORY_SIZE = 2000;
 	const static int INPUT_SIZE = 27;
 	const static int ACTION_COUNT = 9; // 13 with drifts
 
@@ -116,6 +118,10 @@ private:
 
 	// Executes the action according to the selection action
 	void executeAction(int action);
+
+	/* Trains the internal Q network based on the given statesand reward
+	also updates the currentActionIndex variable */
+	void train(float* previousState, float* currentState, int actionIndex, float reward);
 
 	KartSensors* sensor;
 
@@ -131,6 +137,15 @@ private:
 	float* stateArrB;
 	bool previousIsA;
 
+	float* memoryBeforeStates;
+	float* memoryAfterStates;
+	int* memoryActions;
+	float* memoryRewards;
+	int currentMemoryIndex;
+	int nextMemoryIndex;
+	bool isMemoryFull;
+
+	int currentActionIndex;
 	int previousActionIndex;
 
 	float discountFactor;
@@ -138,4 +153,6 @@ private:
 	float currentSteer;
 	float currentMovement;
 	bool currentDrift;
+
+	bool justFailed;
 };

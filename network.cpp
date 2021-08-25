@@ -66,10 +66,13 @@ float Network::train(float* inputs, float* expectedOutputs)
 		}
 	}
 
+	return batchLoss;
+}
+
+void Network::apply()
+{
 	for (int i = 0; i < layerCount; i++)
 	{
 		layers[i]->apply(learningRate, weightDecay);
 	}
-
-	return batchLoss;
 }

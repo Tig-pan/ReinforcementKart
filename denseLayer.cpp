@@ -22,11 +22,13 @@ DenseLayer::DenseLayer(int inputNodes, int outputNodes, Activation* activation)
 	for (int i = 0; i < inputNodes * outputNodes; i++)
 	{
 		weights[i] = distribution(generator);
+		weightGradients[i] = 0.0f;
 	}
 
 	for (int i = 0; i < outputNodes; i++)
 	{
 		biases[i] = 0.0f;
+		biasGradients[i] = 0.0f;
 	}
 }
 
@@ -49,11 +51,11 @@ void DenseLayer::backpropogate(float* inputs)
 	activation->applyDerivative(error, nodes, outputNodes);
 	for (int i = 0; i < outputNodes; i++)
 	{
-		biasGradients[i] = error[i];
+		biasGradients[i] += error[i];
 
 		for (int j = 0; j < inputNodes; j++)
 		{
-			weightGradients[i * inputNodes + j] = inputs[j] * error[i];
+			weightGradients[i * inputNodes + j] += inputs[j] * error[i];
 		}
 	}
 }
@@ -76,10 +78,12 @@ void DenseLayer::apply(float learningRate, float weightDecay)
 	for (int i = 0; i < inputNodes * outputNodes; i++)
 	{
 		weights[i] += weightGradients[i] * learningRate - 2.0f * weights[i] * weightDecay;
+		weightGradients[i] = 0.0f;
 	}
 
 	for (int i = 0; i < outputNodes; i++)
 	{
 		biases[i] += biasGradients[i] * learningRate - 2.0f * biases[i] * weightDecay;
+		biasGradients[i] = 0.0f;
 	}
 }
